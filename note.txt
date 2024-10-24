@@ -1,0 +1,30 @@
+need to create admin 
+add admin credentials into db
+
+
+
+admin adding -> 
+    insert into src_db.admin (email,password,role)
+values ('admin@gmail.com','$12$LdUcF3U9XFJ3.ASYpfycuO1/9g0KpKHtDs2gm3M2wLhtaQe1tkF2u','ADMIN');
+
+
+residency adding -> 
+    
+
+
+submiting user details for registration => 
+    add a field for payment success or not.             
+
+    send email to users when successfully registered
+
+
+
+
+    important - >   only save users data after payment success for registration
+
+    nees to change student count condition check 
+
+
+
+
+need to verify payment and toggle success from hoter reception dashbord for accomodation - since users adding screen shot of the payment
