@@ -223,7 +223,7 @@ export class BookingService {
       },
     });
     if (!payment || !payment) {
-      throw new NotFoundException('User with this transaction id not found');
+      throw new NotFoundException('Invalid transaction id');
     }
 
     if (!payment.groupId) {
@@ -233,13 +233,16 @@ export class BookingService {
     const groupMmbers = await this.prisma.groupMember.findMany({
       where: {
         groupId: payment.groupId,
+        user:{
+          memberType:"IIA_MEMBER"
+        }
       },
       include: {
         user: true,
       },
     });
     if (groupMmbers.length === 0) {
-      throw new NotFoundException('No group member found');
+      throw new NotFoundException('You are not allowed to book accomodation.');
     }
 
     return groupMmbers.map((member) => member.user);
