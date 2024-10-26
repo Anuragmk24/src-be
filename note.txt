@@ -20,7 +20,6 @@ submiting user details for registration =>
 
 
 
-    important - >   only save users data after payment success for registration
 
     nees to change student count condition check 
 
@@ -28,3 +27,7 @@ submiting user details for registration =>
 
 
 need to verify payment and toggle success from hoter reception dashbord for accomodation - since users adding screen shot of the payment
+
+
+
+INSERT INTO src_db.admin(email, password, role) VALUES ('admin@gmail.com', '$2a$12$y62gtuKv7Pz4LCq.apKJreRee1uWu8Pgawmbsthqk04XbjITsUuTO', 'ADMIN');

@@ -16,7 +16,7 @@ async function bootstrap() {
 
   // app.enableCors();
   app.enableCors({
-    origin: [process.env.FRONTEND_URL], // Replace with your React app's Vercel URL
+    origin: [process.env.FRONTEND_URL,process.env.FRONTEND_LOCAL_URL], // Replace with your React app's Vercel URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
 
