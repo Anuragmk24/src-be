@@ -76,6 +76,7 @@ export class PaymentService {
   }
 
   async verifyPaymentResponseHash(reqData: any, res: Response) {
+    console.log("REqdata =======> ",reqData)
     try {
       const shashum = crypto.createHash('sha512');
       let hash_data = this.SALT;
@@ -188,7 +189,7 @@ export class PaymentService {
           amount: amount, // E nsure this is a valid Decimal
           paymentMethod, // String (e.g., "Credit Card", "PayPal")
           paymentStatus: 'PENDING', // String status, e.g., "Pending"
-          groupId:groupId,
+          groupId: groupId,
           transactionId: Date(), // Optional for now, can be filled later
 
           type, // Ensure this matches the PaymentType enum
@@ -246,6 +247,7 @@ export class PaymentService {
           qrcodeUrl,
           status,
         };
+        console.log("emaildat ",emailData)
 
         const htmlToSend = template(emailData);
         let mailOptions = {
