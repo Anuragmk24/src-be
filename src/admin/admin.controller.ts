@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Res,
   HttpStatus,
+  Get,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
@@ -35,6 +36,22 @@ export class AdminController {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'Error changing attendee status',
         error,
+      });
+    }
+  }
+
+  @Get('/dashbord-data-counts')
+  async fetchDashbordData(@Res() res: Response) {
+    try {
+      const counts = await this.adminService.fetchDashbordCounts(res);
+      return res.status(200).json({
+        success: true,
+        data: counts,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching dashboard data',
       });
     }
   }
