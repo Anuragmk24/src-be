@@ -5,15 +5,19 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async updateAttendance(id: any, attended: boolean) {
-    const user = await this.prisma.user.findFirst(id);
+  async updateAttendance(userId: any) {
+    console.log("userid => ",userId)
+    const user = await this.prisma.user.findFirst(userId);
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new NotFoundException(`User with userId ${userId} not found`);
     }
+
+    const newAttendanceStatus = !user.attended;
+
     return await this.prisma.user.update({
-      where: { id },
-      data: { attended },
+      where: { id: userId },
+      data: { attended:newAttendanceStatus },
     });
   }
 }
