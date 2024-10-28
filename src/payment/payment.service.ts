@@ -122,6 +122,7 @@ export class PaymentService {
           },
         });
 
+        console.log("payment  ======> ",payment)
         if (payment) {
           const paymentUpdate = await this.prisma.payment.update({
             where: {

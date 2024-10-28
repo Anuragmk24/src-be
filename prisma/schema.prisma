@@ -64,6 +64,7 @@ model User {
   bookingType              String?
   fileName                 String?
   groupSize                Int
+  attended                 Boolean        @default(false)
   isStudentAffiliatedToIia Boolean        @default(false)
   createdAt                DateTime       @default(now())
   memberType               MemberType     @default(NON_IIA_MEMBER)
@@ -114,7 +115,7 @@ model Payment {
   orderId       Int?        @default(123)
   paymentMethod String
   groupId       Int?
-  group         Group?       @relation(fields: [groupId], references: [id])
+  group         Group?      @relation(fields: [groupId], references: [id])
   paymentStatus String
   transactionId String      @unique
   createdAt     DateTime    @default(now())

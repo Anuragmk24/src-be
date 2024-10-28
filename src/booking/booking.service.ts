@@ -31,7 +31,6 @@ export class BookingService {
         amount,
         spouse,
       } = data;
-    
 
       const newGroup = await this.prisma.group.create({
         data: {
@@ -177,7 +176,20 @@ export class BookingService {
           payments: true,
           accomodations: true,
           spouse: true,
-          groupMmebers: true,
+          groupMmebers: {
+            include:{
+              group:{
+                include:{
+                  Payment:true,
+                  GroupMember:{
+                    include:{
+                      user:true
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
       });
 
@@ -200,7 +212,6 @@ export class BookingService {
           memberType: 'STUDENT',
         },
       });
-
 
       // if(!count){
       //   return
@@ -233,9 +244,9 @@ export class BookingService {
     const groupMmbers = await this.prisma.groupMember.findMany({
       where: {
         groupId: payment.groupId,
-        user:{
-          memberType:"IIA_MEMBER"
-        }
+        user: {
+          memberType: 'IIA_MEMBER',
+        },
       },
       include: {
         user: true,
@@ -297,14 +308,14 @@ export class BookingService {
         message: 'File uploaded successfully',
         group: newGroup,
         payment: newPayment,
-        ok:true
+        ok: true,
       });
     } catch (error) {
       console.log('error while adding accomodation data', error);
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         message: 'Error while adding accommodation data',
         error: error.message || 'Internal Server Error',
-        ok:false
+        ok: false,
       });
     }
   }
