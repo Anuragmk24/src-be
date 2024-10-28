@@ -18,8 +18,10 @@ export class PaymentService {
   ) {
     this.mailService.setApiKey(this.config.get('SENDGRID_API_KEY'));
   }
-  private readonly API_KEY = 'fb6bca86-b429-4abf-a42f-824bdd29022e';
-  private readonly SALT = '80c67bfdf027da08de88ab5ba903fecafaab8f6d';
+  // private readonly API_KEY = 'fb6bca86-b429-4abf-a42f-824bdd29022e';
+  // private readonly SALT = '80c67bfdf027da08de88ab5ba903fecafaab8f6d';
+  private readonly API_KEY = process.env.OMNIWARE_API_KEY;
+  private readonly SALT = process.env.OMNIWARE_SALT;
 
   async generateQrCode(transaction_id: string): Promise<string> {
     try {
