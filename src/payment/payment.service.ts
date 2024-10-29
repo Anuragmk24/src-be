@@ -78,7 +78,6 @@ export class PaymentService {
   }
 
   async verifyPaymentResponseHash(reqData: any, res: Response) {
-    console.log("REqdata =======> ",reqData)
     try {
       const shashum = crypto.createHash('sha512');
       let hash_data = this.SALT;
@@ -104,8 +103,6 @@ export class PaymentService {
         .toUpperCase();
 
       if (reqData?.hash == calculated_hash) {
-        /// SEND CONFIRMATION EMAIL TO USERS
-
         const user: any = await this.prisma.user.findFirst({
           where: {
             email: reqData['email'],
@@ -118,13 +115,32 @@ export class PaymentService {
             .json({ message: 'User not found' });
         }
 
+        const groupMmber: any = await this.prisma.groupMember.findMany({
+          where: {
+            userId: user.id,
+          },
+        });
+
+        const groupMembers: any = await this.prisma.groupMember.findMany({
+          where: {
+            groupId: groupMmber[0].groupId,
+          },
+          include: { user: true },
+        });
+
+     
+        if (groupMembers.length === 0) {
+          return res
+            .status(HttpStatus.NOT_FOUND)
+            .json({ message: 'No group members found' });
+        }
+
         const payment = await this.prisma.payment.findFirst({
           where: {
             userId: user.id,
           },
         });
 
-        console.log("payment  ======> ",payment)
         if (payment) {
           const paymentUpdate = await this.prisma.payment.update({
             where: {
@@ -144,14 +160,16 @@ export class PaymentService {
         }
         const qrUrl = await this.generateQrCode(reqData?.transaction_id);
         if (reqData['response_code'] == 0) {
-          ///need to send success email to users
-          const response = await this.sendBookingResonseEmail(
-            reqData?.name,
-            reqData?.email,
-            reqData?.transaction_id,
-            qrUrl,
-            true,
-          );
+
+          for (const member of groupMembers) {
+            const response = await this.sendBookingResonseEmail(
+              member.user.firstName,
+              member.user.email,
+              reqData?.transaction_id,
+              qrUrl,
+              reqData['response_code'] === '0',
+            );
+          }
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
@@ -250,11 +268,10 @@ export class PaymentService {
           qrcodeUrl,
           status,
         };
-        console.log("emaildat ",emailData)
 
         const htmlToSend = template(emailData);
         let mailOptions = {
-          from: 'contact@kartblue.com',
+          from: process.env.MAIL_USERNAME,
           to: userEmail,
           subject: 'SRC Registration',
           text: 'Welcome to SRC',
