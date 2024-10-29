@@ -22,7 +22,7 @@
       #999; font-size: 12px; } .event-details { margin-bottom: 20px; }
       .event-details strong { display: block; margin-bottom: 5px; }
       .evntDetails{ display: flex; justify-content: center; align-items: center;
-      }
+      } .qr-link{ color: blue; text-decoration: none; cursor: pointer; }
     </style>
   </head>
 
@@ -69,14 +69,26 @@
           <div class='qr-code'>
             <center>
 
-            <img
-              src='{{qrcodeUrl}}'
-              alt='QR Code'
-              style='max-width: 150px; border: 2px solid #4CAF50; padding: 5px; border-radius: 8px;'
-            />
+              <img
+                src='{{qrcodeUrl}}'
+                alt='QR Code'
+                style='max-width: 150px; border: 2px solid #4CAF50; padding: 5px; border-radius: 8px;'
+              />
             </center>
 
           </div>
+          <p>In case the QR code is not visible, you can to download the QR
+            code.</p>
+          <a
+            class='qr-link'
+            href='https://{{qrcodeUrl}}'
+            rel='noopener noreferrer'
+            target='_blank'
+            id='LPlnk898969'
+            download='QRCode.png'
+          >
+            click here
+          </a>
 
           <p>If you have any questions, feel free to reach out to us at
             mail@src2024.in</p>
