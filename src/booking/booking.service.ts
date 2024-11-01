@@ -80,7 +80,7 @@ export class BookingService {
               gstNumber, // common fields
               gstBillingAddress, // common fields
               bookingType, // common fields
-              iia:member.iia,
+              iia: member.iia,
               isBringingSpouse: bringingSpouse === 'Yes', // common fields
               groupSize: group.length, // common fields
               memberType: memberType,
@@ -140,7 +140,7 @@ export class BookingService {
               data: {
                 userId: user.id,
                 groupId: newGroup?.id || null,
-                accommodationConfirmed: false, // set true after payment successful
+                accommodationConfirmed: true, // set true after payment successful
                 createdAt: new Date(),
               },
             });
@@ -178,19 +178,19 @@ export class BookingService {
           accomodations: true,
           spouse: true,
           groupMmebers: {
-            include:{
-              group:{
-                include:{
-                  Payment:true,
-                  GroupMember:{
-                    include:{
-                      user:true
-                    }
-                  }
-                }
-              }
-            }
-          }
+            include: {
+              group: {
+                include: {
+                  Payment: true,
+                  GroupMember: {
+                    include: {
+                      user: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
@@ -234,7 +234,7 @@ export class BookingService {
         group: true,
       },
     });
-    console.log("payment ===============> ",payment)
+    console.log('payment ===============> ', payment);
     if (!payment || !payment) {
       throw new NotFoundException('Invalid transaction id');
     }
@@ -246,15 +246,15 @@ export class BookingService {
     const groupMmbers = await this.prisma.groupMember.findMany({
       where: {
         groupId: payment.groupId,
-          user: {
-            memberType: 'IIA_MEMBER',
-          },
+        user: {
+          memberType: 'IIA_MEMBER',
+        },
       },
       include: {
         user: true,
       },
     });
-    console.log("group members ===========> ",groupMmbers)
+    console.log('group members ===========> ', groupMmbers);
     if (groupMmbers.length === 0) {
       throw new NotFoundException('You are not allowed to book accomodation.');
     }
@@ -290,7 +290,7 @@ export class BookingService {
       const newPayment = await this.prisma.payment.create({
         data: {
           paymentMethod: 'Manual',
-          paymentStatus: 'PENDING',
+          paymentStatus: 'SUCCESS',
           transactionId: transactionId,
           type: 'ACCOMMODATION',
           amount:
@@ -307,6 +307,16 @@ export class BookingService {
           userId: 3,
         },
       }); // Send success response
+
+      const accomodation = await this.prisma.accomodation.create({
+        data: {
+          groupId: newGroup.id ?? null,
+          accommodationConfirmed: true,
+          createdAt: new Date(),
+        },
+      });
+
+      console.log('accomodation ==============> ', accomodation);
       return res.status(HttpStatus.OK).json({
         message: 'File uploaded successfully',
         group: newGroup,

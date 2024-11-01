@@ -160,7 +160,7 @@ export class PaymentService {
         }
         const qrUrl = await this.generateQrCode(reqData?.transaction_id);
         if (reqData['response_code'] == 0) {
-
+          
           for (const member of groupMembers) {
             const response = await this.sendBookingResonseEmail(
               member.user.firstName,
