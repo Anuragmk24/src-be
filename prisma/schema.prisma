@@ -74,6 +74,7 @@ model User {
   attended                 Boolean        @default(false)
   isStudentAffiliatedToIia Boolean        @default(false)
   createdAt                DateTime       @default(now())
+  iia                      String         @default("")
   memberType               MemberType     @default(NON_IIA_MEMBER)
   spouse                   Spouse[]
   groupMmebers             GroupMember[]

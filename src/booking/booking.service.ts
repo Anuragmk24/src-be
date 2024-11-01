@@ -80,6 +80,7 @@ export class BookingService {
               gstNumber, // common fields
               gstBillingAddress, // common fields
               bookingType, // common fields
+              iia:member.iia,
               isBringingSpouse: bringingSpouse === 'Yes', // common fields
               groupSize: group.length, // common fields
               memberType: memberType,
@@ -233,6 +234,7 @@ export class BookingService {
         group: true,
       },
     });
+    console.log("payment ===============> ",payment)
     if (!payment || !payment) {
       throw new NotFoundException('Invalid transaction id');
     }
@@ -244,14 +246,15 @@ export class BookingService {
     const groupMmbers = await this.prisma.groupMember.findMany({
       where: {
         groupId: payment.groupId,
-        user: {
-          memberType: 'IIA_MEMBER',
-        },
+          user: {
+            memberType: 'IIA_MEMBER',
+          },
       },
       include: {
         user: true,
       },
     });
+    console.log("group members ===========> ",groupMmbers)
     if (groupMmbers.length === 0) {
       throw new NotFoundException('You are not allowed to book accomodation.');
     }
