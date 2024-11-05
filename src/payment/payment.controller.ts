@@ -9,7 +9,7 @@ export class PaymentController {
   @Post('request')
   generatePaymentHash(@Body() body, @Res() res: Response) {
     const hash = this.paymentService.generatePaymentHash(body);
-    res.json({ api_key: 'fb6bca86-b429-4abf-a42f-824bdd29022e', hash });
+    res.json({ api_key: process.env.OMNIWARE_API_KEYOMNIWARE_API_KEY, hash });
   }
   @Post('response')
   async handlePaymentResponse(@Body() body, @Res() res: Response) {

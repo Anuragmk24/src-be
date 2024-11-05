@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { MemberType } from '@prisma/client';
 import { Response } from 'express';
 import { PaymentService } from 'src/payment/payment.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -21,7 +22,7 @@ export class BookingService {
         gstNumber,
         gstBillingAddress,
         isStudentAffiliatedToIia,
-        bookingType,
+        bookingType = 'Individual',
         bringingSpouse,
         accomodation,
         group,
@@ -165,14 +166,47 @@ export class BookingService {
     }
   }
 
-  async fetchBookings(start: number, limit: number) {
+  async fetchBookings(start: number, limit: number, search?: string) {
     try {
+      const searchFilter = search
+        ? {
+            OR: [
+              { firstName: { contains: search } },
+              { lastName: { contains: search } },
+              { email: { contains: search } },
+              { mobile: { contains: search } },
+              { iia: { contains: search } },
+              { coaNumber: { contains: search } },
+              { state: { contains: search } },
+              { center: { contains: search } },
+              // Assuming memberType is an enum, use a different approach
+              {
+                payments: {
+                  some: {
+                    transactionId: { contains: search },
+                 
+                  },
+                },
+              },
+              {
+                payments: {
+                  some: {
+                    paymentStatus: { contains: search },
+                 
+                  },
+                },
+              },
+            ],
+          }
+        : undefined;
+
       const bookings = await this.prisma.user.findMany({
         skip: Number(start),
         take: Number(limit),
         orderBy: {
           createdAt: 'desc',
         },
+        where: searchFilter,
         include: {
           payments: true,
           accomodations: true,
@@ -182,6 +216,12 @@ export class BookingService {
               group: {
                 include: {
                   Payment: true,
+                  Accomodation: {
+                    select: {
+                      accommodationConfirmed: true,
+                      groupId: true,
+                    },
+                  },
                   GroupMember: {
                     include: {
                       user: true,
@@ -229,12 +269,12 @@ export class BookingService {
       where: {
         transactionId,
         paymentStatus: 'SUCCESS',
+        type: 'REGISTRATION',
       },
       include: {
         group: true,
       },
     });
-    console.log('payment ===============> ', payment);
     if (!payment || !payment) {
       throw new NotFoundException('Invalid transaction id');
     }
@@ -246,15 +286,14 @@ export class BookingService {
     const groupMmbers = await this.prisma.groupMember.findMany({
       where: {
         groupId: payment.groupId,
-        user: {
-          memberType: 'IIA_MEMBER',
-        },
+        // user: {
+        //   memberType: 'IIA_MEMBER',
+        // },
       },
       include: {
         user: true,
       },
     });
-    console.log('group members ===========> ', groupMmbers);
     if (groupMmbers.length === 0) {
       throw new NotFoundException('You are not allowed to book accomodation.');
     }
@@ -316,7 +355,6 @@ export class BookingService {
         },
       });
 
-      console.log('accomodation ==============> ', accomodation);
       return res.status(HttpStatus.OK).json({
         message: 'File uploaded successfully',
         group: newGroup,

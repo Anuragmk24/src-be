@@ -69,11 +69,13 @@ export class BookingController {
   async fetchBookings(
     @Query('start') start: number = 0,
     @Query('limit') limit: number = 10,
+    @Query('search') search:string
   ) {
     try {
       const { bookings, totalCount } = await this.bookingService.fetchBookings(
         start,
         limit,
+        search
       );
 
       return {

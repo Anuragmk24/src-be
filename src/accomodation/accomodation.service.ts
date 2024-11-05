@@ -1,25 +1,26 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { PaymentType, Payment, User } from '@prisma/client';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { PaymentService } from 'src/payment/payment.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import * as crypto from 'crypto';
 import { Response } from 'express';
 import { join } from 'path';
-import { PrismaService } from 'src/prisma/prisma.service';
 import * as fs from 'fs';
 import * as handlebars from 'handlebars';
-import { ConfigService } from '@nestjs/config';
-import { MailService } from '@sendgrid/mail';
 import * as QRCode from 'qrcode';
+import { MailService } from '@sendgrid/mail';
+import { ConfigService } from '@nestjs/config';
+
 @Injectable()
-export class PaymentService {
+export class AccomodationService {
   constructor(
     private prisma: PrismaService,
+    private readonly paymentService: PaymentService,
     private config: ConfigService,
     private readonly mailService: MailService,
   ) {
     this.mailService.setApiKey(this.config.get('SENDGRID_API_KEY'));
   }
-  // private readonly API_KEY = 'fb6bca86-b429-4abf-a42f-824bdd29022e';
-  // private readonly SALT = '80c67bfdf027da08de88ab5ba903fecafaab8f6d';
+
   private readonly API_KEY = process.env.OMNIWARE_API_KEY;
   private readonly SALT = process.env.OMNIWARE_SALT;
 
@@ -32,53 +33,142 @@ export class PaymentService {
       throw new Error('Could not generate QR code');
     }
   }
-
-  //generate payment hash for omniware request
-  generatePaymentHash(reqData: any): string {
+  async createAccomodationData(data: any) {
     try {
-      const shasum = crypto.createHash('sha512');
-      let hash_data = this.SALT;
+      const userIds = data.payload.map((user: any) => user.id);
 
-      const hashColumns = [
-        'address_line_1',
-        'address_line_2',
-        'amount',
-        'api_key',
-        'city',
-        'country',
-        'currency',
-        'description',
-        'email',
-        'mode',
-        'name',
-        'order_id',
-        'phone',
-        'return_url',
-        'state',
-        'udf1',
-        'udf2',
-        'udf3',
-        'udf4',
-        'udf5',
-        'zip_code',
-      ];
-
-      reqData['api_key'] = this.API_KEY;
-      hashColumns.forEach((entry) => {
-        if (reqData[entry]) {
-          hash_data += '|' + reqData[entry];
-        }
+      // Find existing group with any of the users
+      const existingGroup = await this.prisma.group.findFirst({
+        where: {
+          GroupMember: {
+            some: {
+              userId: {
+                in: userIds,
+              },
+            },
+          },
+        },
+        include: {
+          GroupMember: {
+            select: {
+              user: true,
+            },
+          },
+          Accomodation: true,
+        },
       });
 
-      const resultKey = shasum.update(hash_data).digest('hex').toUpperCase();
-      return resultKey;
+      let groupId: any;
+      let groupMembers: any;
+
+      // Check if all users are in the existing group
+      const allUsersInGroup =
+        existingGroup &&
+        userIds.every((userId: any) =>
+          existingGroup.GroupMember.some(
+            (member: any) => member.user.id === userId,
+          ),
+        );
+
+      if (existingGroup && allUsersInGroup) {
+        groupId = existingGroup.id;
+        groupMembers = existingGroup.GroupMember;
+
+        await this.prisma.payment.create({
+          data: {
+            groupId: groupId,
+            amount: data.amount,
+            paymentMethod: '',
+            paymentStatus: 'PENDING',
+            transactionId: new Date().toString(),
+            type: 'ACCOMMODATION',
+            createdAt: new Date(),
+            orderId: 123,
+            userId: userIds[0],
+          },
+        });
+
+        await this.prisma.accomodation.create({
+          data: {
+            groupId: groupId,
+            accommodationConfirmed: false,
+            createdAt: new Date(),
+          },
+        });
+      } else {
+        console.log(
+          'Creating new group as not all users are in a single group.',
+        );
+
+        const newGroup = await this.prisma.group.create({
+          data: {
+            numberOfMembers: userIds.length,
+            GroupMember: {
+              create: data.payload.map((user: any) => ({
+                userId: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                mobile: user.mobile,
+                createdAt: new Date(),
+              })),
+            },
+            createdAt: new Date(),
+          },
+          include: {
+            GroupMember: {
+              select: {
+                user: true,
+              },
+            },
+          },
+        });
+
+        groupId = newGroup.id;
+        groupMembers = newGroup.GroupMember;
+
+        await this.prisma.payment.create({
+          data: {
+            groupId: groupId,
+            paymentMethod: '',
+            paymentStatus: 'PENDING',
+            transactionId: new Date().toString(),
+            type: 'ACCOMMODATION',
+            amount: data.amount,
+            createdAt: new Date(),
+            orderId: 213,
+            userId: userIds[0],
+          },
+        });
+
+        await this.prisma.accomodation.create({
+          data: {
+            groupId: groupId,
+            accommodationConfirmed: false,
+            createdAt: new Date(),
+          },
+        });
+      }
+
+      return {
+        groupId,
+        groupMembers,
+      };
     } catch (error) {
-      console.log('error generate payment ', error);
+      console.log('error while create accommodation from service page ', error);
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message || error,
+          error: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async verifyPaymentResponseHash(reqData: any, res: Response) {
-    console.log("reqdata ============> ",reqData)
+    console.log('reqdata ============> ', reqData);
     try {
       const shashum = crypto.createHash('sha512');
       let hash_data = this.SALT;
@@ -103,7 +193,7 @@ export class PaymentService {
         .digest('hex')
         .toUpperCase();
 
-        console.log("reqData?.hash == calculated_hash ",reqData?.hash == calculated_hash)
+        console.log("reqData?.hash == calculated_hash",reqData?.hash == calculated_hash)
       if (reqData?.hash == calculated_hash) {
         const user: any = await this.prisma.user.findFirst({
           where: {
@@ -130,7 +220,16 @@ export class PaymentService {
           include: { user: true },
         });
 
-     
+        const accomodationUpdate = await this.prisma.accomodation.updateMany({
+          where: {
+            groupId: groupMmber[0].groupId,
+          },
+          data: {
+            accommodationConfirmed:
+              reqData['response_code'] === '0' ? true : false,
+          },
+        });
+
         if (groupMembers.length === 0) {
           return res
             .status(HttpStatus.NOT_FOUND)
@@ -140,6 +239,7 @@ export class PaymentService {
         const payment = await this.prisma.payment.findFirst({
           where: {
             userId: user.id,
+            type: 'ACCOMMODATION',
           },
         });
 
@@ -147,6 +247,7 @@ export class PaymentService {
           const paymentUpdate = await this.prisma.payment.update({
             where: {
               id: payment.id,
+              type: 'ACCOMMODATION',
             },
             data: {
               amount: parseFloat(reqData['amount']),
@@ -162,7 +263,6 @@ export class PaymentService {
         }
         const qrUrl = await this.generateQrCode(reqData?.transaction_id);
         if (reqData['response_code'] == 0) {
-          
           for (const member of groupMembers) {
             const response = await this.sendBookingResonseEmail(
               member.user.firstName,
@@ -173,7 +273,7 @@ export class PaymentService {
             );
           }
           return res.redirect(
-            `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
+            `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
         } else {
           //need to send failed email to users
@@ -185,7 +285,7 @@ export class PaymentService {
             false,
           );
           return res.redirect(
-            `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
+            `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
         }
       } else {
@@ -195,53 +295,6 @@ export class PaymentService {
       }
     } catch (error) {
       console.log('Errror respone ', error);
-    }
-  }
-
-  async createPayment(
-    groupId: number,
-    userId: number,
-    amount: number,
-    paymentMethod: string,
-    type: PaymentType,
-  ): Promise<Payment> {
-    try {
-      const newPayment = await this.prisma.payment.create({
-        data: {
-          userId, // Ensure this matches the type (number)
-          amount: amount, // E nsure this is a valid Decimal
-          paymentMethod, // String (e.g., "Credit Card", "PayPal")
-          paymentStatus: 'PENDING', // String status, e.g., "Pending"
-          groupId: groupId,
-          transactionId: Date(), // Optional for now, can be filled later
-
-          type, // Ensure this matches the PaymentType enum
-        },
-      });
-
-      return newPayment;
-    } catch (error) {
-      throw new Error('Error creating payment: ' + error.message);
-    }
-  }
-
-  async verifyResponse(transactionId: string, res: Response) {
-    try {
-      const payment = await this.prisma.payment.findFirst({
-        where: {
-          transactionId: transactionId,
-        },
-      });
-
-      if (!payment) {
-        return res.status(HttpStatus.NOT_FOUND).json({
-          message: 'Payment not found for the given transaction ID.',
-        });
-      }
-
-      return res.status(HttpStatus.OK).json(payment);
-    } catch (error) {
-      console.log('error while fetching payment response');
     }
   }
 
@@ -258,7 +311,7 @@ export class PaymentService {
           process.cwd(),
           'src',
           'mail_template',
-          'bookingEmail.hbs',
+          'accomodationEmail.hbs',
         );
 
         const source = fs.readFileSync(filePath, 'utf-8').toString();

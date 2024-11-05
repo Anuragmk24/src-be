@@ -10,9 +10,10 @@ import { PaymentService } from './payment/payment.service';
 import { PaymentController } from './payment/payment.controller';
 import { PaymentModule } from './payment/payment.module';
 import { AdminModule } from './admin/admin.module';
+import { AccomodationModule } from './accomodation/accomodation.module';
 
 @Module({
-  imports: [AuthModule, PrismaModule, ConfigModule.forRoot({ isGlobal: true }), BookingModule, PaymentModule, AdminModule],
+  imports: [AuthModule, PrismaModule, ConfigModule.forRoot({ isGlobal: true }), BookingModule, PaymentModule, AdminModule, AccomodationModule],
   controllers: [AppController, PaymentController],
   providers: [AppService, PrismaService, PaymentService],
 })
