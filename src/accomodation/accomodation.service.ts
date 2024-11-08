@@ -193,7 +193,10 @@ export class AccomodationService {
         .digest('hex')
         .toUpperCase();
 
-        console.log("reqData?.hash == calculated_hash",reqData?.hash == calculated_hash)
+      console.log(
+        'reqData?.hash == calculated_hash',
+        reqData?.hash == calculated_hash,
+      );
       if (reqData?.hash == calculated_hash) {
         const user: any = await this.prisma.user.findFirst({
           where: {
@@ -342,6 +345,44 @@ export class AccomodationService {
     } catch (error) {
       console.log('error sending email ', error);
       return error;
+    }
+  }
+
+  async getTotalMembersWithAccomodation() {
+    try {
+      const individualAccomodationCount = await this.prisma.accomodation.count({
+        where: {
+          accommodationConfirmed: true,
+        },
+      });
+
+      const groupsWithAccomodation = await this.prisma.accomodation.findMany({
+        where: {
+          accommodationConfirmed: true,
+        },
+        select: {
+          groupId: true,
+        },
+        distinct: ['groupId'],
+      });
+
+      let groupMembersCount = 0;
+      for (const group of groupsWithAccomodation) {
+        console.log('group', group);
+        const groupData = await this.prisma.group.findUnique({
+          where: { id: group.groupId! },
+          select: { numberOfMembers: true },
+        });
+
+        groupMembersCount += groupData?.numberOfMembers ?? 0;
+      }
+
+      const totalMembersWithAccomodation =
+        individualAccomodationCount + groupMembersCount;
+      return totalMembersWithAccomodation;
+    } catch (error) {
+      console.log('error fetching members with accomodation ', error);
+      throw error;
     }
   }
 }

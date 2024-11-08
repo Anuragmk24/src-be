@@ -1,4 +1,4 @@
-import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Res } from '@nestjs/common';
 import { AccomodationService } from './accomodation.service';
 import { Response } from 'express';
 
@@ -29,5 +29,28 @@ export class AccomodationController {
   @Post('response')
   async handleAccomodationResponse(@Body() Body, @Res() res: Response) {
     return this.accomodationService.verifyPaymentResponseHash(Body, res);
+  }
+
+  @Get('total-numbers')
+  async getTotalMembersWithAccomodation(){
+    try {
+      const totalMembers = await this.accomodationService.getTotalMembersWithAccomodation();
+
+      return {
+        statusCode:HttpStatus.OK,
+        message:"Total members with acccomodation retrieved successfully",
+        count:totalMembers
+      }
+    } catch (error) {
+      console.log("error fetching total members with accomodation ",error)
+      throw new HttpException(
+        {
+          statusCode:HttpStatus.INTERNAL_SERVER_ERROR,
+          message:"Failed to retrieve total members with accomodation",
+          error:error.message
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      )
+    }
   }
 }
