@@ -353,12 +353,14 @@ export class AccomodationService {
       const individualAccomodationCount = await this.prisma.accomodation.count({
         where: {
           accommodationConfirmed: true,
+          groupId: null,
         },
       });
 
       const groupsWithAccomodation = await this.prisma.accomodation.findMany({
         where: {
           accommodationConfirmed: true,
+          groupId: { not: null },
         },
         select: {
           groupId: true,
