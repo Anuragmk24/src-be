@@ -350,25 +350,39 @@ export class AccomodationService {
 
   async getTotalMembersWithAccomodation() {
     try {
-      const individualAccomodationCount = await this.prisma.accomodation.count({
-        where: {
-          accommodationConfirmed: true,
-          groupId: null,
-        },
-      });
+      // const individualAccomodationCount = await this.prisma.accomodation.count({
+      //   where: {
+      //     accommodationConfirmed: true,
+      //     groupId: null,
+      //   },
+      // });
 
-      const groupsWithAccomodation = await this.prisma.accomodation.findMany({
-        where: {
-          accommodationConfirmed: true,
-          groupId: { not: null },
+      const groupsWithAccomodation = await this.prisma.payment.findMany({
+        where:{
+          paymentStatus:'SUCCESS',
+          type:{
+            in:['ACCOMMODATION','BOTH']
+          }
         },
-        select: {
-          groupId: true,
+        select:{
+          groupId:true
         },
-        distinct: ['groupId'],
-      });
+        distinct:['groupId']
+      })
+
+      // const groupsWithAccomodation = await this.prisma.accomodation.findMany({
+      //   where: {
+      //     accommodationConfirmed: true,
+      //     groupId: { not: null },
+      //   },
+      //   select: {
+      //     groupId: true,
+      //   },
+      //   distinct: ['groupId'],
+      // });
 
       let groupMembersCount = 0;
+      console.log("groupwithaccomodaiton ",groupsWithAccomodation)
       for (const group of groupsWithAccomodation) {
         console.log('group', group);
         const groupData = await this.prisma.group.findUnique({
@@ -379,9 +393,8 @@ export class AccomodationService {
         groupMembersCount += groupData?.numberOfMembers ?? 0;
       }
 
-      const totalMembersWithAccomodation =
-        individualAccomodationCount + groupMembersCount;
-      return totalMembersWithAccomodation;
+     
+      return groupMembersCount;
     } catch (error) {
       console.log('error fetching members with accomodation ', error);
       throw error;
