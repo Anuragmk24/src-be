@@ -9,6 +9,8 @@ import * as handlebars from 'handlebars';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '@sendgrid/mail';
 import * as QRCode from 'qrcode';
+import { v4 as uuidv4 } from 'uuid';
+
 @Injectable()
 export class PaymentService {
   constructor(
@@ -171,6 +173,7 @@ export class PaymentService {
               qrUrl,
               reqData['response_code'] === '0',
             );
+            console.log("response after booking ",response)
           }
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
@@ -184,6 +187,8 @@ export class PaymentService {
             qrUrl,
             false,
           );
+          console.log("response after booking ",response)
+
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
@@ -206,6 +211,8 @@ export class PaymentService {
     type: PaymentType,
   ): Promise<Payment> {
     try {
+      const transactionId = `TXN${uuidv4()}MK`;
+
       const newPayment = await this.prisma.payment.create({
         data: {
           userId, // Ensure this matches the type (number)
@@ -213,7 +220,7 @@ export class PaymentService {
           paymentMethod, // String (e.g., "Credit Card", "PayPal")
           paymentStatus: 'PENDING', // String status, e.g., "Pending"
           groupId: groupId,
-          transactionId: Date(), // Optional for now, can be filled later
+          transactionId: transactionId, // Optional for now, can be filled later
 
           type, // Ensure this matches the PaymentType enum
         },

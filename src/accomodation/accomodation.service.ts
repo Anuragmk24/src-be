@@ -168,7 +168,6 @@ export class AccomodationService {
   }
 
   async verifyPaymentResponseHash(reqData: any, res: Response) {
-    console.log('reqdata ============> ', reqData);
     try {
       const shashum = crypto.createHash('sha512');
       let hash_data = this.SALT;
@@ -193,10 +192,7 @@ export class AccomodationService {
         .digest('hex')
         .toUpperCase();
 
-      console.log(
-        'reqData?.hash == calculated_hash',
-        reqData?.hash == calculated_hash,
-      );
+      
       if (reqData?.hash == calculated_hash) {
         const user: any = await this.prisma.user.findFirst({
           where: {
@@ -390,7 +386,6 @@ export class AccomodationService {
 
       let groupMembersCount = 0;
       for (const group of groupsWithAccomodation) {
-        console.log('group', group);
         const groupData = await this.prisma.group.findUnique({
           where: { id: group.groupId! },
           select: { numberOfMembers: true },

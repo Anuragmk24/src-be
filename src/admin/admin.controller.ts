@@ -7,6 +7,7 @@ import {
   Res,
   HttpStatus,
   Get,
+  Post,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
@@ -53,6 +54,18 @@ export class AdminController {
         success: false,
         message: 'Error fetching dashboard data',
       });
+    }
+  }
+
+  @Post('/send-email')
+  async sendEmail(@Body() body:any, @Res() res:Response){
+    try {
+      return await this.adminService.sendEmail(body,res)
+    } catch (error) {
+      return res.status(500).json({
+        success:false,
+        message:'Error sending email'
+      })
     }
   }
 }
