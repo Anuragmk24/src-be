@@ -63,6 +63,7 @@ export class AdminController {
     try {
       return await this.adminService.sendEmail(body,res)
     } catch (error) {
+      console.log("Error=====================> ",error)
       return res.status(500).json({
         success:false,
         message:'Error sending email'

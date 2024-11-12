@@ -100,7 +100,7 @@ export class AdminService {
         true,
       );
       if (response.statusCode === 202) {
-        res
+       return res
           .status(HttpStatus.OK)
           .json({ success: true, message: 'Email send successfully' });
       } else {
@@ -112,7 +112,7 @@ export class AdminService {
       }
     } catch (error) {
       console.log('error sending email ', error);
-      return res.status(500).json({
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: 'Error sending email',
         error: error,
