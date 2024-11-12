@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Get,
   Post,
+  Query,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
@@ -68,4 +69,47 @@ export class AdminController {
       })
     }
   }
+
+
+  @Get('chapters')
+  //need authentication decorator
+  async fetchChapters(
+    @Query('start') start: number = 0,
+    @Query('limit') limit: number = 10,
+    @Query('search') search:string
+  ) {
+    try {
+    const response =   await this.adminService
+      .fetchChaptersData(
+        start,
+        limit,
+        search
+      );
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Bookings retrieved successfully',
+        data: response,
+      };
+    } catch (error) {
+      console.log('Error from controller fetching bookings ', error);
+      throw new Error('Error fetching bookings ' + error.message);
+    }
+  }
+
+  @Get('center')
+  async fetchCenters(@Query('state') state:string){
+    try {
+      const response = await this.adminService.fetchCenters(state)
+      return {
+        statusCode:HttpStatus.OK,
+        message:"success",
+        data:response
+      }
+    } catch (error) {
+      console.log("error while fetching fetchCenters ",error)
+      throw new Error(`error fetching centers ` + error)
+    }
+  }
+
 }

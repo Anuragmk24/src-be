@@ -167,4 +167,58 @@ export class AdminService {
       return error;
     }
   }
+
+  async fetchChaptersData(start:number,limit:number,search?:string){
+    try {
+      const searchFilter = search ? {
+        OR:[
+          {state:{contains:search}},
+          {center:{contains:search}},
+        ]
+      }: undefined
+
+      const stateData = await this.prisma.user.groupBy({
+       by:['state'],
+       _count:{state:true},
+       where:searchFilter,
+       skip:Number(start),
+       take:Number(limit),
+       orderBy:{_count:{state:'desc'}}
+
+      })
+     
+      if(!stateData || stateData.length ===0){
+        throw new NotFoundException('No data found')
+      }
+
+      return stateData.map((item)=>({
+        state:item.state,
+        userCount:item._count.state
+      }))
+    } catch (error) {
+      console.log("error while fetching chapters",error)
+      throw new Error("error fetching chaptersdata")
+    }
+  }
+
+  async fetchCenters(state:string){
+    try {
+      const centers = await this.prisma.user.groupBy({
+        by:['center'],
+        where:{
+          state:state
+        },
+        _count:{
+          center:true
+        }
+      })
+      return centers.map((center)=> ({
+        center:center.center,
+        userCount:center._count.center
+      }))
+    } catch (error) {
+      console.log("error while fetching centers using state")
+      throw new Error(`error fetchign centers using state `+ error)
+    }
+  }
 }
