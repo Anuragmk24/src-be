@@ -80,7 +80,7 @@ export class PaymentService {
   }
 
   async verifyPaymentResponseHash(reqData: any, res: Response) {
-    console.log("reqdata ============> ",reqData)
+    console.log('reqdata ============> ', reqData);
     try {
       const shashum = crypto.createHash('sha512');
       let hash_data = this.SALT;
@@ -105,11 +105,17 @@ export class PaymentService {
         .digest('hex')
         .toUpperCase();
 
-        console.log("reqData?.hash == calculated_hash ",reqData?.hash == calculated_hash)
+      console.log(
+        'reqData?.hash == calculated_hash ',
+        reqData?.hash == calculated_hash,
+      );
       if (reqData?.hash == calculated_hash) {
         const user: any = await this.prisma.user.findFirst({
           where: {
             email: reqData['email'],
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         });
 
@@ -132,7 +138,6 @@ export class PaymentService {
           include: { user: true },
         });
 
-     
         if (groupMembers.length === 0) {
           return res
             .status(HttpStatus.NOT_FOUND)
@@ -143,9 +148,14 @@ export class PaymentService {
           where: {
             userId: user.id,
           },
+          orderBy: {
+            createdAt: 'desc',
+          },
         });
+        console.log('payment', payment);
 
         if (payment) {
+          console.log('in payment');
           const paymentUpdate = await this.prisma.payment.update({
             where: {
               id: payment.id,
@@ -153,7 +163,7 @@ export class PaymentService {
             data: {
               amount: parseFloat(reqData['amount']),
               paymentStatus:
-                reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED',
+                reqData['response_code'] === '0' ? 'SUCCESS' : reqData['response_code'] === '1000' ?  'FAILED' :'PENDING',
               transactionId: reqData['transaction_id'],
               paymentMethod: reqData['payment_mode'],
               orderId: reqData['orderId'],
@@ -164,7 +174,6 @@ export class PaymentService {
         }
         const qrUrl = await this.generateQrCode(reqData?.transaction_id);
         if (reqData['response_code'] == 0) {
-          
           for (const member of groupMembers) {
             const response = await this.sendBookingResonseEmail(
               member.user.firstName,
@@ -173,12 +182,12 @@ export class PaymentService {
               qrUrl,
               reqData['response_code'] === '0',
             );
-            console.log("response after booking ",response)
+            console.log('response after booking ', response);
           }
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        } else {
+        } else if(reqData['response_code'] === '1000') {
           //need to send failed email to users
           const response = await this.sendBookingResonseEmail(
             reqData?.name,
@@ -187,13 +196,18 @@ export class PaymentService {
             qrUrl,
             false,
           );
-          console.log("response after booking ",response)
+          console.log('response after booking ', response);
 
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
+        }else{
+          console.log("unknown resopsnse")
+          return res.redirect(
+            `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=PENDING&transaction_id=${reqData['transaction_id']}`,
+          );
         }
-      } else {
+      } else { 
         return res
           .status(HttpStatus.UNAUTHORIZED)
           .json({ message: 'Hash mismatch' });

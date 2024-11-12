@@ -198,6 +198,9 @@ export class AccomodationService {
           where: {
             email: reqData['email'],
           },
+          orderBy: {
+            createdAt: 'desc',
+          },
         });
 
         if (!user) {
@@ -240,6 +243,9 @@ export class AccomodationService {
             userId: user.id,
             type: 'ACCOMMODATION',
           },
+          orderBy: {
+            createdAt: 'desc',
+          },
         });
 
         if (payment) {
@@ -251,7 +257,7 @@ export class AccomodationService {
             data: {
               amount: parseFloat(reqData['amount']),
               paymentStatus:
-                reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED',
+              reqData['response_code'] === '0' ? 'SUCCESS' : reqData['response_code'] === '1000' ?  'FAILED' :'PENDING',
               transactionId: reqData['transaction_id'],
               paymentMethod: reqData['payment_mode'],
               orderId: reqData['orderId'],
@@ -274,7 +280,7 @@ export class AccomodationService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        } else {
+        } else if(reqData['response_code'] === '1000') {
           //need to send failed email to users
           const response = await this.sendBookingResonseEmail(
             reqData?.name,
@@ -285,6 +291,10 @@ export class AccomodationService {
           );
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
+          );
+        }else{
+          return res.redirect(
+            `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=PENDING&transaction_id=${reqData['transaction_id']}`,
           );
         }
       } else {
