@@ -180,7 +180,13 @@ export class AdminService {
       const stateData = await this.prisma.user.groupBy({
        by:['state'],
        _count:{state:true},
-       where:searchFilter,
+       where:{
+        payments:{
+          some:{
+            paymentStatus:'SUCCESS'
+          }
+        }
+       },
        skip:Number(start),
        take:Number(limit),
        orderBy:{_count:{state:'desc'}}
@@ -206,7 +212,12 @@ export class AdminService {
       const centers = await this.prisma.user.groupBy({
         by:['center'],
         where:{
-          state:state
+          state:state,
+          payments:{
+            some:{
+              paymentStatus:'SUCCESS'
+            }
+          }
         },
         _count:{
           center:true
