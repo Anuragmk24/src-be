@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as handlebars from 'handlebars';
 import { MailService } from '@sendgrid/mail';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -100,7 +101,7 @@ export class AdminService {
         true,
       );
       if (response.statusCode === 202) {
-       return res
+        return res
           .status(HttpStatus.OK)
           .json({ success: true, message: 'Email send successfully' });
       } else {
@@ -127,7 +128,6 @@ export class AdminService {
     qrcodeUrl: String,
     status: boolean,
   ) {
-   
     try {
       if (userName && userEmail && transactionId && qrcodeUrl) {
         const filePath = join(
@@ -168,68 +168,128 @@ export class AdminService {
     }
   }
 
-  async fetchChaptersData(start:number,limit:number,search?:string){
+  //take group id from paymets and findi out
+  async fetchChaptersData(start: number, limit: number, search?: string) {
     try {
-      const searchFilter = search ? {
-        OR:[
-          {state:{contains:search}},
-          {center:{contains:search}},
-        ]
-      }: undefined
+      const groupsWithRegistration = await this.prisma.payment.findMany({
+        where: {
+          paymentStatus: 'SUCCESS',
+          type: {
+            in: ['BOTH', 'REGISTRATION'],
+          },
+        },
+        select: {
+          groupId: true,
+        },
+        distinct: ['groupId'],
+      });
+      console.log('groupsWithRegistration', groupsWithRegistration);
 
-      const stateData = await this.prisma.user.groupBy({
-       by:['state'],
-       _count:{state:true},
-       where:{
-        payments:{
-          some:{
-            paymentStatus:'SUCCESS'
-          }
-        }
-       },
-       skip:Number(start),
-       take:Number(limit),
-       orderBy:{_count:{state:'desc'}}
+      const groupIds = groupsWithRegistration.map((g) => g.groupId);
 
-      })
-     
-      if(!stateData || stateData.length ===0){
-        throw new NotFoundException('No data found')
-      }
+      const groupMembers: any = await this.prisma.groupMember.findMany({
+        where: {
+          groupId: { in: groupIds },
+        },
+      });
 
-      return stateData.map((item)=>({
-        state:item.state,
-        userCount:item._count.state
-      }))
+      const userIds = groupMembers.map((member) => member.userId);
+
+      const users = await this.prisma.user.findMany({
+        where: {
+          id: { in: userIds },
+        },
+      });
+      const stateCounts = users.reduce(
+        (acc, user) => {
+          acc[user.state] = (acc[user.state] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Convert the object to an array of { state, count }
+      const stateCountsArray = Object.entries(stateCounts).map(
+        ([state, count]) => ({
+          state,
+          count,
+        }),
+      );
+
+      console.log('State Counts Array: ', stateCountsArray);
+      return stateCountsArray;
     } catch (error) {
-      console.log("error while fetching chapters",error)
-      throw new Error("error fetching chaptersdata")
+      console.log('error while fetching chapters', error);
+      throw new Error('error fetching chaptersdata');
     }
   }
 
-  async fetchCenters(state:string){
+  async fetchCenters(state: string) {
     try {
-      const centers = await this.prisma.user.groupBy({
-        by:['center'],
-        where:{
-          state:state,
-          payments:{
-            some:{
-              paymentStatus:'SUCCESS'
-            }
+      // return centers.map((center) => ({
+      //   center: center.center,
+      //   userCount: center._count.center,
+      // }));
+      const searchFilter = state
+        ? {
+            OR: [
+              { state: { contains: state } },
+              { center: { contains: state } },
+            ],
           }
+        : undefined;
+
+      const groupsWithRegistration = await this.prisma.payment.findMany({
+        where: {
+          paymentStatus: 'SUCCESS',
+          type: {
+            in: ['BOTH', 'REGISTRATION'],
+          },
         },
-        _count:{
-          center:true
-        }
-      })
-      return centers.map((center)=> ({
-        center:center.center,
-        userCount:center._count.center
-      }))
+        select: {
+          groupId: true,
+        },
+        distinct: ['groupId'],
+      });
+      console.log('groupsWithRegistration', groupsWithRegistration);
+
+      const groupIds = groupsWithRegistration.map((g) => g.groupId);
+
+      const groupMembers: any = await this.prisma.groupMember.findMany({
+        where: {
+          groupId: { in: groupIds },
+        },
+      });
+
+      const userIds = groupMembers.map((member) => member.userId);
+
+      const users = await this.prisma.user.findMany({
+        where: {
+          ...searchFilter,
+          id: { in: userIds },
+        },
+      });
+      const centerCount = users.reduce(
+        (acc, user) => {
+          acc[user.center] = (acc[user.center] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Convert the object to an array of { state, count }
+      const centerCountArray = Object.entries(centerCount).map(
+        ([center, count]) => ({
+          center,
+          count,
+        }),
+      );
+
+      console.log('State Counts Array: ', centerCountArray);
+      return centerCountArray;
     } catch (error) {
-      console.log("error while fetching centers using state")
-      throw new Error(`error fetchign centers using state `+ error)
+      console.log('error while fetching centers using state');
+      throw new Error(`error fetchign centers using state ` + error);
     }
   }
 }
