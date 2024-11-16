@@ -251,6 +251,11 @@ export class BookingService {
       const count = await this.prisma.user.count({
         where: {
           memberType: 'STUDENT',
+          payments:{
+            some:{
+              paymentStatus:"SUCCESS"
+            }
+          }
         },
       });
 
@@ -286,6 +291,10 @@ export class BookingService {
     const groupMmbers = await this.prisma.groupMember.findMany({
       where: {
         groupId: payment.groupId,
+        user: {
+          memberType: { in: ['IIA_MEMBER', 'NON_IIA_MEMBER'] },
+        },
+        
         // user: {
         //   memberType: 'IIA_MEMBER',
         // },
