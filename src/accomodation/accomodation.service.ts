@@ -192,7 +192,6 @@ export class AccomodationService {
         .digest('hex')
         .toUpperCase();
 
-      
       if (reqData?.hash == calculated_hash) {
         const user: any = await this.prisma.user.findFirst({
           where: {
@@ -257,7 +256,11 @@ export class AccomodationService {
             data: {
               amount: parseFloat(reqData['amount']),
               paymentStatus:
-              reqData['response_code'] === '0' ? 'SUCCESS' : reqData['response_code'] === '1000' ?  'FAILED' :'PENDING',
+                reqData['response_code'] === '0'
+                  ? 'SUCCESS'
+                  : reqData['response_code'] === '1000'
+                    ? 'FAILED'
+                    : 'PENDING',
               transactionId: reqData['transaction_id'],
               paymentMethod: reqData['payment_mode'],
               orderId: reqData['orderId'],
@@ -280,7 +283,7 @@ export class AccomodationService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        } else if(reqData['response_code'] === '1000') {
+        } else if (reqData['response_code'] === '1000') {
           //need to send failed email to users
           const response = await this.sendBookingResonseEmail(
             reqData?.name,
@@ -292,7 +295,7 @@ export class AccomodationService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        }else{
+        } else {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/accomodation/result?status=PENDING&transaction_id=${reqData['transaction_id']}`,
           );
@@ -369,17 +372,14 @@ export class AccomodationService {
         distinct: ['groupId'],
       });
 
-      let registeredCount =0;
-      for(const group of groupsWithRegistration){
+      let registeredCount = 0;
+      for (const group of groupsWithRegistration) {
         const groupData = await this.prisma.group.findUnique({
-          where:{id:group.groupId!},
-          select:{numberOfMembers:true}
+          where: { id: group.groupId! },
+          select: { numberOfMembers: true },
         });
-        registeredCount += groupData?.numberOfMembers ?? 0 ;
+        registeredCount += groupData?.numberOfMembers ?? 0;
       }
-
-
-
 
       const groupsWithAccomodation = await this.prisma.payment.findMany({
         where: {
@@ -405,12 +405,107 @@ export class AccomodationService {
       }
 
       return {
-        totalRegistration:registeredCount,
-        totalAccomodation:groupMembersCount
+        totalRegistration: registeredCount,
+        totalAccomodation: groupMembersCount,
       };
     } catch (error) {
       console.log('error fetching members with accomodation ', error);
       throw error;
+    }
+  }
+
+  async fetchAccomodationDetails(
+    start: number,
+    limit: number,
+    search?: string,
+  ) {
+    try {
+      const accommodation = await this.prisma.user.findMany({
+        skip: Number(start),
+        take: Number(limit),
+        orderBy: {
+          createdAt: 'desc',
+        },
+        where: {
+          payments: {
+            some: {
+              type: {
+                in: ['ACCOMMODATION', 'BOTH'],
+              },
+            },
+          },
+          ...(search && {
+            OR: [
+              { firstName: { contains: search } },
+              { lastName: { contains: search } },
+              { email: { contains: search } },
+              { mobile: { contains: search } },
+              { iia: { contains: search } },
+              { coaNumber: { contains: search } },
+              { state: { contains: search } },
+              { center: { contains: search } },
+              {
+                payments: {
+                  some: {
+                    transactionId: { contains: search },
+                  },
+                },
+              },
+            ],
+          }),
+        },
+        include: {
+          payments: {
+            where: {
+              type: {
+                in: ['ACCOMMODATION', 'BOTH'],
+              },
+              paymentStatus:"SUCCESS"
+            },
+          },
+          accomodations: true,
+          spouse: true,
+          groupMmebers: {
+            include: {
+              group: {
+                include: {
+                  Payment: {
+                    where: {
+                      type: {
+                        in: ['ACCOMMODATION', 'BOTH'],
+                      },
+                      paymentStatus:"SUCCESS"
+
+                    },
+                  },
+                  Accomodation: {
+                    select: {
+                      accommodationConfirmed: true,
+                      groupId: true,
+                    },
+                  },
+                  GroupMember: {
+                    include: {
+                      user: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+  
+      const totalCount = await this.prisma.user.count();
+
+      return {
+        accommodation,
+        totalCount,
+      };
+    } catch (error) {
+      console.log('error fetching accomodation ', error);
+
+      throw new Error('Error fetching accomodation  ' + error.message);
     }
   }
 }

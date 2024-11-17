@@ -11,9 +11,23 @@ import { PaymentController } from './payment/payment.controller';
 import { PaymentModule } from './payment/payment.module';
 import { AdminModule } from './admin/admin.module';
 import { AccomodationModule } from './accomodation/accomodation.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
-  imports: [AuthModule, PrismaModule, ConfigModule.forRoot({ isGlobal: true }), BookingModule, PaymentModule, AdminModule, AccomodationModule],
+  imports: [
+    AuthModule,
+    PrismaModule,
+    ConfigModule.forRoot({ isGlobal: true }),
+    BookingModule,
+    PaymentModule,
+    AdminModule,
+    AccomodationModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'), // Path to the uploads folder
+      serveRoot: '/api/uploads', // URL prefix to serve files
+    }),
+  ],
   controllers: [AppController, PaymentController],
   providers: [AppService, PrismaService, PaymentService],
 })

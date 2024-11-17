@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { AccomodationService } from './accomodation.service';
 import { Response } from 'express';
 
@@ -32,25 +41,48 @@ export class AccomodationController {
   }
 
   @Get('total-numbers')
-  async getTotalMembersWithAccomodation(){
+  async getTotalMembersWithAccomodation() {
     try {
-      const totalMembers = await this.accomodationService.getTotalMembersWithAccomodation();
+      const totalMembers =
+        await this.accomodationService.getTotalMembersWithAccomodation();
 
       return {
-        statusCode:HttpStatus.OK,
-        message:"Total members with acccomodation retrieved successfully",
-        count:totalMembers
-      }
+        statusCode: HttpStatus.OK,
+        message: 'Total members with acccomodation retrieved successfully',
+        count: totalMembers,
+      };
     } catch (error) {
-      console.log("error fetching total members with accomodation ",error)
+      console.log('error fetching total members with accomodation ', error);
       throw new HttpException(
         {
-          statusCode:HttpStatus.INTERNAL_SERVER_ERROR,
-          message:"Failed to retrieve total members with accomodation",
-          error:error.message
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Failed to retrieve total members with accomodation',
+          error: error.message,
         },
-        HttpStatus.INTERNAL_SERVER_ERROR
-      )
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('fetch')
+  async fetchAccomodationData(
+    @Query('start') start: number = 0,
+    @Query('limit') limit: number = 10,
+    @Query('search') search: string,
+  ) {
+    try {
+      const { accommodation,totalCount } = await this.accomodationService.fetchAccomodationDetails(start,limit,search)
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Bookings retrieved successfully',
+        data: {
+          accommodation,
+          totalCount,
+        },
+      };
+    } catch (error) {
+      console.log('Error from controller fetching accomodation ', error);
+      throw new Error('Error fetching accomodation ' + error.message);
     }
   }
 }
