@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { Response } from 'express';
 
@@ -43,5 +43,10 @@ export class PaymentController {
     @Res() res: Response,
   ) {
     return this.paymentService.verifyResponse(transactionId, res);
+  }
+
+  @Post('payment-status-check/:id')
+  async checkPaymentStatus(@Param('id') phone:string,@Res() res:Response){
+    return this.paymentService.chckPaymentStatus(phone)
   }
 }

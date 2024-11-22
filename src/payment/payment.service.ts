@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { MailService } from '@sendgrid/mail';
 import * as QRCode from 'qrcode';
 import { v4 as uuidv4 } from 'uuid';
+const axios = require('axios');
 
 @Injectable()
 export class PaymentService {
@@ -25,6 +26,11 @@ export class PaymentService {
   private readonly API_KEY = process.env.OMNIWARE_API_KEY;
   private readonly SALT = process.env.OMNIWARE_SALT;
 
+  private computeHash(params){
+    const {api_key,customer_phone,salt} = params;
+    const stringToHash =`${api_key}|${customer_phone}|${salt}`;
+    return require('crypto').createHash('sha256').update(stringToHash).digest('hex');
+  }
   async generateQrCode(transaction_id: string): Promise<string> {
     try {
       const qrcodeUrl = await QRCode.toDataURL(transaction_id);
@@ -311,5 +317,30 @@ export class PaymentService {
       console.log('error sending email ', error);
       return error;
     }
+  }
+
+
+  //hash generation with phonenumber for payment status check api
+  
+  //payment status check api
+
+  async  chckPaymentStatus(phoneNumber:string){
+  try {
+
+    const hash = this.computeHash({ api_key: this.API_KEY, customer_phone: phoneNumber, salt:this.SALT })
+    console.log("hash================> ",hash)
+    const response = await axios.post('https://pgbiz.omniware.in/v2/paymentstatus', {
+      api_key: this.API_KEY,
+      customer_phone: phoneNumber,
+      hash,
+    }); 
+    console.log("response from payment ",response ) 
+  
+  
+  } catch (
+   error
+  ) {
+    console.error(`api call failed:`,error.message)    
+  }
   }
 }
