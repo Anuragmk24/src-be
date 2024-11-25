@@ -26,11 +26,6 @@ export class PaymentService {
   private readonly API_KEY = process.env.OMNIWARE_API_KEY;
   private readonly SALT = process.env.OMNIWARE_SALT;
 
-  private computeHash(params){
-    const {api_key,customer_phone,salt} = params;
-    const stringToHash =`${api_key}|${customer_phone}|${salt}`;
-    return require('crypto').createHash('sha256').update(stringToHash).digest('hex');
-  }
   async generateQrCode(transaction_id: string): Promise<string> {
     try {
       const qrcodeUrl = await QRCode.toDataURL(transaction_id);
@@ -169,7 +164,11 @@ export class PaymentService {
             data: {
               amount: parseFloat(reqData['amount']),
               paymentStatus:
-                reqData['response_code'] === '0' ? 'SUCCESS' : reqData['response_code'] === '1000' ?  'FAILED' :'PENDING',
+                reqData['response_code'] === '0'
+                  ? 'SUCCESS'
+                  : reqData['response_code'] === '1000'
+                    ? 'FAILED'
+                    : 'PENDING',
               transactionId: reqData['transaction_id'],
               paymentMethod: reqData['payment_mode'],
               orderId: reqData['orderId'],
@@ -193,7 +192,7 @@ export class PaymentService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        } else if(reqData['response_code'] === '1000') {
+        } else if (reqData['response_code'] === '1000') {
           //need to send failed email to users
           const response = await this.sendBookingResonseEmail(
             reqData?.name,
@@ -207,13 +206,13 @@ export class PaymentService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        }else{
-          console.log("unknown resopsnse")
+        } else {
+          console.log('unknown resopsnse');
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=PENDING&transaction_id=${reqData['transaction_id']}`,
           );
         }
-      } else { 
+      } else {
         return res
           .status(HttpStatus.UNAUTHORIZED)
           .json({ message: 'Hash mismatch' });
@@ -319,28 +318,63 @@ export class PaymentService {
     }
   }
 
-
   //hash generation with phonenumber for payment status check api
-  
+
   //payment status check api
+  async computeHash(params) {
+    try {
+      const shasum = crypto.createHash('sha512');
+      let hash_data = this.SALT;
 
-  async  chckPaymentStatus(phoneNumber:string){
-  try {
+      console.log('hashdata pre ', hash_data);
+      const hashColumns = ['customer_phone'];
 
-    const hash = this.computeHash({ api_key: this.API_KEY, customer_phone: phoneNumber, salt:this.SALT })
-    console.log("hash================> ",hash)
-    const response = await axios.post('https://pgbiz.omniware.in/v2/paymentstatus', {
-      api_key: this.API_KEY,
-      customer_phone: phoneNumber,
-      hash,
-    }); 
-    console.log("response from payment ",response ) 
-  
-  
-  } catch (
-   error
-  ) {
-    console.error(`api call failed:`,error.message)    
+      hashColumns.forEach((entry) => {
+        if (params[entry]) {
+          hash_data += '|' + params[entry] + '|' + this.API_KEY;
+        }
+      });
+
+      console.log('hashdata ', hash_data);
+      const resultKey = shasum.update(hash_data).digest('hex').toUpperCase();
+      return resultKey;
+    } catch (error) {
+      console.log('error generate payment ', error);
+    }
+    // const sortedKeys = Object.keys(fields).sort();
+    // console.log("sortedkeys ",sortedKeys)
+    // const hashData = sortedKeys.map((key) => fields[key]).join('|');
+    // console.log('String to hash:', hashData);
+
+    // const shasum = crypto.createHash('sha512');
+    // console.log('shasum=============> ',shasum)
+    // const hash = shasum.update(hashData).digest('hex').toUpperCase(); // Ensure uppercase conversion
+
+    // return hash;
   }
+  async chckPaymentStatus(phoneNumber: string) {
+    try {
+      // const hash = await this.computeHash({
+      //   customer_phone: phoneNumber,
+      // });
+      const hash = this.generatePaymentHash({
+        api_key: this.API_KEY,
+        phone: phoneNumber,
+        salt: this.SALT,
+      });
+      console.log('hash================> ', hash);
+      const response = await axios.post(
+        'https://pgbiz.omniware.in/v2/paymentstatus',
+        {
+          api_key: this.API_KEY,
+          customer_phone: phoneNumber,
+          hash,
+        },
+      );
+      console.log('response from payment ', response.data);
+      return response;
+    } catch (error) {
+      console.error(`api call failed:`, error.message);
+    }
   }
 }
