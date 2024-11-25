@@ -184,7 +184,6 @@ export class BookingService {
                 payments: {
                   some: {
                     transactionId: { contains: search },
-                 
                   },
                 },
               },
@@ -192,7 +191,6 @@ export class BookingService {
                 payments: {
                   some: {
                     paymentStatus: { contains: search },
-                 
                   },
                 },
               },
@@ -251,11 +249,11 @@ export class BookingService {
       const count = await this.prisma.user.count({
         where: {
           memberType: 'STUDENT',
-          payments:{
-            some:{
-              paymentStatus:"SUCCESS"
-            }
-          }
+          payments: {
+            some: {
+              paymentStatus: 'SUCCESS',
+            },
+          },
         },
       });
 
@@ -294,7 +292,7 @@ export class BookingService {
         user: {
           memberType: { in: ['IIA_MEMBER', 'NON_IIA_MEMBER'] },
         },
-        
+
         // user: {
         //   memberType: 'IIA_MEMBER',
         // },
@@ -379,4 +377,49 @@ export class BookingService {
       });
     }
   }
+
+  async fetchUsersForCheckin(search: string) {
+    console.log('search ', search);
+  
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { mobile: { equals: search } },
+          {
+            payments: {
+              some: {
+                transactionId: { equals: search },
+                type: { in: ['REGISTRATION', 'BOTH'] },
+              },
+            },
+          },
+        ],
+      },
+      select: {
+        groupMmebers: {
+          select: {
+            group: {
+              select: {
+                GroupMember: {
+                  select: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  
+    // Simplify the response to a flat array of user objects
+    const simplifiedUsers = users.flatMap((user) =>
+      user.groupMmebers.flatMap((member) =>
+        member.group.GroupMember.map((groupMember) => groupMember.user)
+      )
+    );
+  
+    return simplifiedUsers;
+  }
+  
 }
