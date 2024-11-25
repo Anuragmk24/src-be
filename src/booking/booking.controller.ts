@@ -69,13 +69,13 @@ export class BookingController {
   async fetchBookings(
     @Query('start') start: number = 0,
     @Query('limit') limit: number = 10,
-    @Query('search') search:string
+    @Query('search') search: string,
   ) {
     try {
       const { bookings, totalCount } = await this.bookingService.fetchBookings(
         start,
         limit,
-        search
+        search,
       );
 
       return {
@@ -149,14 +149,41 @@ export class BookingController {
   )
   async uploadAccomodationReciept(
     @UploadedFiles() files: Express.Multer.File[],
-    @Body() body: any,@Res() res:Response
+    @Body() body: any,
+    @Res() res: Response,
   ) {
     try {
       const users = JSON.parse(body.users);
-     return await this.bookingService.addAccomodationData(users,res);
-     
+      return await this.bookingService.addAccomodationData(users, res);
     } catch (error) {
       console.log('error changing name ', error);
+    }
+  }
+
+  @Get('checkin/:id')
+  async fetchUsersByTransactionId(
+    @Param('id') searchTerm: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const users =
+        await this.bookingService.fetchUsersForCheckin(searchTerm);
+      return res.status(HttpStatus.OK).json({
+        statusCode: 200,
+        message: 'User details fetched successfully',
+        data: users,
+      });
+    } catch (error) {
+      console.log('in error', error);
+      if (error instanceof NotFoundException) {
+        // Return 404 error with message
+        return res.status(HttpStatus.NOT_FOUND).json({
+          statusCode: HttpStatus.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      // Handle unexpected errors
+      throw new InternalServerErrorException('An unexpected error occurred');
     }
   }
 }
