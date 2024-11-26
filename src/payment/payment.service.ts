@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { MailService } from '@sendgrid/mail';
 import * as QRCode from 'qrcode';
 import { v4 as uuidv4 } from 'uuid';
+const axios = require('axios');
 
 @Injectable()
 export class PaymentService {
@@ -163,7 +164,11 @@ export class PaymentService {
             data: {
               amount: parseFloat(reqData['amount']),
               paymentStatus:
-                reqData['response_code'] === '0' ? 'SUCCESS' : reqData['response_code'] === '1000' ?  'FAILED' :'PENDING',
+                reqData['response_code'] === '0'
+                  ? 'SUCCESS'
+                  : reqData['response_code'] === '1000'
+                    ? 'FAILED'
+                    : 'PENDING',
               transactionId: reqData['transaction_id'],
               paymentMethod: reqData['payment_mode'],
               orderId: reqData['orderId'],
@@ -187,7 +192,7 @@ export class PaymentService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        } else if(reqData['response_code'] === '1000') {
+        } else if (reqData['response_code'] === '1000') {
           //need to send failed email to users
           const response = await this.sendBookingResonseEmail(
             reqData?.name,
@@ -201,13 +206,13 @@ export class PaymentService {
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=${reqData['response_code'] === '0' ? 'SUCCESS' : 'FAILED'}&transaction_id=${reqData['transaction_id']}`,
           );
-        }else{
-          console.log("unknown resopsnse")
+        } else {
+          console.log('unknown resopsnse');
           return res.redirect(
             `${process.env.NEXT_PUBLIC_SELF_URL}/payment/result?status=PENDING&transaction_id=${reqData['transaction_id']}`,
           );
         }
-      } else { 
+      } else {
         return res
           .status(HttpStatus.UNAUTHORIZED)
           .json({ message: 'Hash mismatch' });
@@ -310,6 +315,122 @@ export class PaymentService {
     } catch (error) {
       console.log('error sending email ', error);
       return error;
+    }
+  }
+
+  //hash generation with phonenumber for payment status check api
+
+  //payment status check api
+  async computeHash(params) {
+    try {
+      const shasum = crypto.createHash('sha512');
+      let hash_data = this.SALT;
+
+      console.log('hashdata pre ', hash_data);
+      const hashColumns = ['customer_phone'];
+
+      hashColumns.forEach((entry) => {
+        if (params[entry]) {
+          hash_data += '|' + params[entry] + '|' + this.API_KEY;
+        }
+      });
+
+      console.log('hashdata ', hash_data);
+      const resultKey = shasum.update(hash_data).digest('hex').toUpperCase();
+      return resultKey;
+    } catch (error) {
+      console.log('error generate payment ', error);
+    }
+  }
+
+  async chckPaymentStatus(phoneNumber: string) {
+    try {
+      const hash = this.generatePaymentHash({
+        api_key: this.API_KEY,
+        phone: phoneNumber,
+        salt: this.SALT,
+      })
+      const response = await axios.post(
+        'https://pgbiz.omniware.in/v2/paymentstatus',
+        {
+          api_key: this.API_KEY,
+          customer_phone: phoneNumber,
+          hash,
+        },
+      );
+      return response?.data;
+    } catch (error) {
+      console.error(`api call failed:`, error.message);
+    }
+  }
+
+  async fetchFailedTransactionAndCheckPaymentStatus() {
+    try {
+      const failedPayments = await this.prisma.payment.findMany({
+        where: {
+          paymentStatus: {
+            in: ['FAILED', 'PENDING'],
+          },
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      // console.log('failedPayments', failedPayments);
+      for (const payment of failedPayments) {
+        const { userId, id: paymentId, user } = payment;
+
+        if (!user || !user.mobile) {
+          console.log(
+            `Skipping payment ID ${paymentId}: User or phone number not found.`,
+          );
+          continue;
+        }
+        console.log(
+          `Checking status for user ID: ${userId}, phone: ${user.mobile}`,
+        );
+        const paymentResponse = await this.chckPaymentStatus(user.mobile);
+        console.log('paymentResopnse.data', paymentResponse?.data);
+
+        if (paymentResponse?.data && Array.isArray(paymentResponse.data)) {
+          const isSuccessful = paymentResponse.data.some(
+            (item) => item.response_code === 0,
+          );
+
+          console.log('issuccessfull ', isSuccessful);
+          if (isSuccessful) {
+            console.log(
+              `Payment ID ${paymentId} is successful. Updating status...`,
+            );
+
+            const updatedAt = new Date(Date.now()).toISOString(); // Get current timestamp and convert to ISO-8601 string
+
+            const paymentUpdate = await this.prisma.payment.update({
+              where: { id: paymentId },
+              data: {
+                paymentStatus: paymentResponse?.data?.[0]?.response_message,
+                updatedAt: updatedAt,
+                transactionId:paymentResponse?.data?.[0]?.transaction_id,
+                paymentMethod:paymentResponse?.data?.[0]?.payment_mode
+              },
+            });
+            console.log('paymentUpdate', paymentUpdate);
+          } else {
+            console.log(
+              `Payment ID ${paymentId} remains ${payment.paymentStatus}.`,
+            );
+          }
+        } else {
+          console.log(
+            'Unexpected paymentResponse data format',
+            paymentResponse,
+          );
+        }
+      }
+      console.log('failedusers length', failedPayments.length);
+    } catch (error) {
+      console.log('error while payment status check', error);
     }
   }
 }
