@@ -46,11 +46,16 @@ export class PaymentController {
   }
 
   @Post('payment-status-check/:id')
-  async checkPaymentStatus(@Param('id') phone:string,@Res() res:Response){
-    return this.paymentService.chckPaymentStatus(phone)
+  async checkPaymentStatus(@Param('id') phone: string, @Res() res: Response) {
+    return this.paymentService.chckPaymentStatus(phone);
   }
   @Post('payment-status-api')
-  async sendPaymentCheckApi(@Res() res:Response){
-    return this.paymentService.fetchFailedTransactionAndCheckPaymentStatus()
+  async sendPaymentCheckApi(
+    @Query('offset') offset: any = 0,
+    @Query('batchSize') batchSize: any = 10,
+    @Res() res: Response,
+  ) {
+    const result = await this.paymentService.fetchFailedTransactionAndCheckPaymentStatus(offset,batchSize);
+    return res.status(200).json(result)
   }
 }

@@ -364,7 +364,10 @@ export class PaymentService {
     }
   }
 
-  async fetchFailedTransactionAndCheckPaymentStatus() {
+  async fetchFailedTransactionAndCheckPaymentStatus(
+    offset: any,
+    batchSize: any,
+  ) {
     try {
       const results = {
         totalFailedPayments: 0,
@@ -373,9 +376,8 @@ export class PaymentService {
         skippedPayments: 0,
         errors: [],
       };
-        // Set the batch size (10 records at a time)
-    const batchSize = 10;
-    let offset = 0;
+      // Set the batch size (10 records at a time)
+
       const failedPayments = await this.prisma.payment.findMany({
         where: {
           paymentStatus: {
@@ -385,14 +387,13 @@ export class PaymentService {
         include: {
           user: true,
         },
-        skip: offset, // Skip the processed records
-        take: batchSize,
+        skip: Number(offset), // Skip the processed records
+        take: Number(batchSize),
       });
 
-      
       results.totalFailedPayments = failedPayments.length;
       // console.log('failedPayments', failedPayments);
-      
+
       for (const payment of failedPayments) {
         const { userId, id: paymentId, user } = payment;
 
@@ -407,14 +408,14 @@ export class PaymentService {
           `Checking status for user ID: ${userId}, phone: ${user.mobile}`,
         );
         const paymentResponse = await this.chckPaymentStatus(user.mobile);
-        console.log('paymentResopnse.data', paymentResponse?.data);
+    
 
         if (paymentResponse?.data && Array.isArray(paymentResponse.data)) {
           const isSuccessful = paymentResponse.data.some(
             (item) => item.response_code === 0,
           );
 
-          console.log('issuccessfull ', isSuccessful);
+         
           if (isSuccessful) {
             console.log(
               `Payment ID ${paymentId} is successful. Updating status...`,
@@ -447,8 +448,6 @@ export class PaymentService {
           );
           await this.delay(1000); // delay in ms (e.g., 1 second)
         }
-        offset += batchSize;
-
       }
       return results;
     } catch (error) {
@@ -463,7 +462,7 @@ export class PaymentService {
     }
   }
   // Helper function to introduce a delay (optional)
-delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+  delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }
