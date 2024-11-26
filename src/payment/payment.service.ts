@@ -404,13 +404,11 @@ export class PaymentService {
               `Payment ID ${paymentId} is successful. Updating status...`,
             );
 
-            const updatedAt = new Date(Date.now()).toISOString(); // Get current timestamp and convert to ISO-8601 string
 
             const paymentUpdate = await this.prisma.payment.update({
               where: { id: paymentId },
               data: {
                 paymentStatus: paymentResponse?.data?.[0]?.response_message,
-                updatedAt: updatedAt,
                 transactionId:paymentResponse?.data?.[0]?.transaction_id,
                 paymentMethod:paymentResponse?.data?.[0]?.payment_mode
               },
