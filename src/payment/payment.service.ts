@@ -349,7 +349,7 @@ export class PaymentService {
         api_key: this.API_KEY,
         phone: phoneNumber,
         salt: this.SALT,
-      })
+      });
       const response = await axios.post(
         'https://pgbiz.omniware.in/v2/paymentstatus',
         {
@@ -366,6 +366,13 @@ export class PaymentService {
 
   async fetchFailedTransactionAndCheckPaymentStatus() {
     try {
+      const results = {
+        totalFailedPayments: 0,
+        successfulUpdates: 0,
+        failedPayments: 0,
+        skippedPayments: 0,
+        errors: [],
+      };
       const failedPayments = await this.prisma.payment.findMany({
         where: {
           paymentStatus: {
@@ -377,11 +384,13 @@ export class PaymentService {
         },
       });
 
+      results.totalFailedPayments = failedPayments.length;
       // console.log('failedPayments', failedPayments);
       for (const payment of failedPayments) {
         const { userId, id: paymentId, user } = payment;
 
         if (!user || !user.mobile) {
+          results.skippedPayments++;
           console.log(
             `Skipping payment ID ${paymentId}: User or phone number not found.`,
           );
@@ -404,29 +413,34 @@ export class PaymentService {
               `Payment ID ${paymentId} is successful. Updating status...`,
             );
 
-
             const paymentUpdate = await this.prisma.payment.update({
               where: { id: paymentId },
               data: {
                 paymentStatus: paymentResponse?.data?.[0]?.response_message,
-                transactionId:paymentResponse?.data?.[0]?.transaction_id,
-                paymentMethod:paymentResponse?.data?.[0]?.payment_mode
+                transactionId: paymentResponse?.data?.[0]?.transaction_id,
+                paymentMethod: paymentResponse?.data?.[0]?.payment_mode,
               },
             });
+
+            results.successfulUpdates++;
             console.log('paymentUpdate', paymentUpdate);
           } else {
             console.log(
               `Payment ID ${paymentId} remains ${payment.paymentStatus}.`,
             );
+            results.failedPayments++;
           }
         } else {
           console.log(
             'Unexpected paymentResponse data format',
             paymentResponse,
           );
+          results.errors.push(
+            `Payment ID ${paymentId}: Invalid payment response format.`,
+          );
         }
       }
-      console.log('failedusers length', failedPayments.length);
+      return results;
     } catch (error) {
       console.log('error while payment status check', error);
     }
