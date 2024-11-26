@@ -49,4 +49,8 @@ export class PaymentController {
   async checkPaymentStatus(@Param('id') phone:string,@Res() res:Response){
     return this.paymentService.chckPaymentStatus(phone)
   }
+  @Post('payment-status-api')
+  async sendPaymentCheckApi(@Res() res:Response){
+    return this.paymentService.fetchFailedTransactionAndCheckPaymentStatus()
+  }
 }

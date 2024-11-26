@@ -341,28 +341,15 @@ export class PaymentService {
     } catch (error) {
       console.log('error generate payment ', error);
     }
-    // const sortedKeys = Object.keys(fields).sort();
-    // console.log("sortedkeys ",sortedKeys)
-    // const hashData = sortedKeys.map((key) => fields[key]).join('|');
-    // console.log('String to hash:', hashData);
-
-    // const shasum = crypto.createHash('sha512');
-    // console.log('shasum=============> ',shasum)
-    // const hash = shasum.update(hashData).digest('hex').toUpperCase(); // Ensure uppercase conversion
-
-    // return hash;
   }
+
   async chckPaymentStatus(phoneNumber: string) {
     try {
-      // const hash = await this.computeHash({
-      //   customer_phone: phoneNumber,
-      // });
       const hash = this.generatePaymentHash({
         api_key: this.API_KEY,
         phone: phoneNumber,
         salt: this.SALT,
-      });
-      console.log('hash================> ', hash);
+      })
       const response = await axios.post(
         'https://pgbiz.omniware.in/v2/paymentstatus',
         {
@@ -371,10 +358,79 @@ export class PaymentService {
           hash,
         },
       );
-      console.log('response from payment ', response.data);
-      return response;
+      return response?.data;
     } catch (error) {
       console.error(`api call failed:`, error.message);
+    }
+  }
+
+  async fetchFailedTransactionAndCheckPaymentStatus() {
+    try {
+      const failedPayments = await this.prisma.payment.findMany({
+        where: {
+          paymentStatus: {
+            in: ['FAILED', 'PENDING'],
+          },
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      // console.log('failedPayments', failedPayments);
+      for (const payment of failedPayments) {
+        const { userId, id: paymentId, user } = payment;
+
+        if (!user || !user.mobile) {
+          console.log(
+            `Skipping payment ID ${paymentId}: User or phone number not found.`,
+          );
+          continue;
+        }
+        console.log(
+          `Checking status for user ID: ${userId}, phone: ${user.mobile}`,
+        );
+        const paymentResponse = await this.chckPaymentStatus(user.mobile);
+        console.log('paymentResopnse.data', paymentResponse?.data);
+
+        if (paymentResponse?.data && Array.isArray(paymentResponse.data)) {
+          const isSuccessful = paymentResponse.data.some(
+            (item) => item.response_code === 0,
+          );
+
+          console.log('issuccessfull ', isSuccessful);
+          if (isSuccessful) {
+            console.log(
+              `Payment ID ${paymentId} is successful. Updating status...`,
+            );
+
+            const updatedAt = new Date(Date.now()).toISOString(); // Get current timestamp and convert to ISO-8601 string
+
+            const paymentUpdate = await this.prisma.payment.update({
+              where: { id: paymentId },
+              data: {
+                paymentStatus: 'SUCCESS',
+                updatedAt: updatedAt,
+                transactionId:paymentResponse?.data?.[0]?.transaction_id,
+                paymentMethod:paymentResponse?.data?.[0]?.payment_mode
+              },
+            });
+            console.log('paymentUpdate', paymentUpdate);
+          } else {
+            console.log(
+              `Payment ID ${paymentId} remains ${payment.paymentStatus}.`,
+            );
+          }
+        } else {
+          console.log(
+            'Unexpected paymentResponse data format',
+            paymentResponse,
+          );
+        }
+      }
+      console.log('failedusers length', failedPayments.length);
+    } catch (error) {
+      console.log('error while payment status check', error);
     }
   }
 }
