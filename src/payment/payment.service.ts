@@ -373,6 +373,9 @@ export class PaymentService {
         skippedPayments: 0,
         errors: [],
       };
+        // Set the batch size (10 records at a time)
+    const batchSize = 10;
+    let offset = 0;
       const failedPayments = await this.prisma.payment.findMany({
         where: {
           paymentStatus: {
@@ -382,10 +385,14 @@ export class PaymentService {
         include: {
           user: true,
         },
+        skip: offset, // Skip the processed records
+        take: batchSize,
       });
 
+      
       results.totalFailedPayments = failedPayments.length;
       // console.log('failedPayments', failedPayments);
+      
       for (const payment of failedPayments) {
         const { userId, id: paymentId, user } = payment;
 
@@ -438,11 +445,25 @@ export class PaymentService {
           results.errors.push(
             `Payment ID ${paymentId}: Invalid payment response format.`,
           );
+          await this.delay(1000); // delay in ms (e.g., 1 second)
         }
+        offset += batchSize;
+
       }
       return results;
     } catch (error) {
       console.log('error while payment status check', error);
+      return {
+        totalFailedPayments: 0,
+        successfulUpdates: 0,
+        failedPayments: 0,
+        skippedPayments: 0,
+        errors: [error.message],
+      };
     }
   }
+  // Helper function to introduce a delay (optional)
+delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 }
