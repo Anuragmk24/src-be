@@ -478,7 +478,7 @@ export class BookingService {
       // };
 
       const spouseUsers = user.spouse.map((spouse) => ({
-        id: 'null', // Spouse doesn't have a user ID
+        id: 1001, // Spouse doesn't have a user ID
         firstName: spouse.firstName,
         lastName: spouse.lastName,
         email: spouse.email,
@@ -494,12 +494,12 @@ export class BookingService {
         center: 'null',
         gstNumber: 'null',
         gstBillingAddress: 'null',
-        isBringingSpouse: 'null',
+        isBringingSpouse: true,
         bookingType: 'Spouse',
         fileName: 'null',
-        groupSize: 'null',
-        attended: 'null',
-        isStudentAffiliatedToIia: 'null',
+        groupSize: 2,
+        attended: false,
+        isStudentAffiliatedToIia: false,
         createdAt: user.createdAt,
         iia: 'null',
         memberType: 'IIA_MEMBER',
