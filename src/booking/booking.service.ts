@@ -389,7 +389,7 @@ export class BookingService {
             payments: {
               some: {
                 transactionId: { equals: search },
-                // type: { in: ['REGISTRATION', 'BOTH'] },
+                type: { in: ['REGISTRATION', 'BOTH'] },
               },
             },
           },
