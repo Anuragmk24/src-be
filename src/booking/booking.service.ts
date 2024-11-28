@@ -385,6 +385,7 @@ export class BookingService {
       where: {
         OR: [
           { mobile: { equals: search } },
+          { email: { equals: search } },
           {
             payments: {
               some: {
