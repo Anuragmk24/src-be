@@ -541,31 +541,32 @@ export class BookingService {
     });
     console.log('flatfuser ', flatUsers);
 
-    // // Deduplicate based on the mobile number
-    // const distinctUsers = flatUsers.filter((user, index, self) =>
-    //   index === self.findIndex((u) =>
-    //     u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase()
-    //   )
-    // );
+    // Deduplicate based on the mobile number
+    const distinctUsers = flatUsers.filter((user, index, self) =>
+      index === self.findIndex((u) =>
+        u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase()
+      )
+    );
 
     // Deduplicate based on the mobile number, but allow multiple users with the same mobile if `isBringingSpouse` is true
-    const distinctUsers = flatUsers.filter((user, index, self) => {
-      // If the user is bringing a spouse, allow multiple entries with the same mobile number
-      if (user.isBringingSpouse) {
-        return true; // Allow duplicates if `isBringingSpouse` is true
-      }
+    // const distinctUsers = flatUsers.filter((user, index, self) => {
+    //   // If the user is bringing a spouse, allow multiple entries with the same mobile number
+    //   if (user.isBringingSpouse) {
+    //     return true; // Allow duplicates if `isBringingSpouse` is true
+    //   }
 
-      // Otherwise, check for duplicates based on the mobile number
-      return (
-        index ===
-        self.findIndex(
-          (u) =>
-            u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase(),
-        )
-      );
-    });
+    //   // Otherwise, check for duplicates based on the mobile number
+    //   return (
+    //     index ===
+    //     self.findIndex(
+    //       (u) =>
+    //         u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase(),
+    //     )
+    //   );
+    // });
 
     return distinctUsers;
+
   }
 
   // async fetchUsersForCheckin(search: string) {
