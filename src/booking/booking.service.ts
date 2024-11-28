@@ -547,7 +547,8 @@ export class BookingService {
           (u) =>
             u.firstName === user.firstName &&
             u.lastName === user.lastName &&
-            u.email === user.email, // Use more fields if needed for distinction
+            u.email === user.email && 
+            u.mobile === user.mobile, // Use more fields if needed for distinction
         ),
     );
 
