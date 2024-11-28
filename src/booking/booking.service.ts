@@ -380,8 +380,8 @@ export class BookingService {
 
   async fetchUsersForCheckin(search: string) {
     console.log('search ', search);
-  
-    const users = await this.prisma.user.findMany({
+
+    const users: any = await this.prisma.user.findMany({
       where: {
         OR: [
           { mobile: { equals: search } },
@@ -396,6 +396,39 @@ export class BookingService {
         ],
       },
       select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        mobile: true,
+        companyName: true,
+        designation: true,
+        country: true,
+        state: true,
+        coaNumber: true,
+        city: true,
+        pinCode: true,
+        collegeName: true,
+        center: true,
+        gstNumber: true,
+        gstBillingAddress: true,
+        isBringingSpouse: true,
+        bookingType: true,
+        fileName: true,
+        groupSize: true,
+        attended: true,
+        isStudentAffiliatedToIia: true,
+        createdAt: true,
+        iia: true,
+        memberType: true,
+        spouse: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobile: true,
+          },
+        },
         groupMmebers: {
           select: {
             group: {
@@ -411,15 +444,266 @@ export class BookingService {
         },
       },
     });
-  
-    // Simplify the response to a flat array of user objects
-    const simplifiedUsers = users.flatMap((user) =>
-      user.groupMmebers.flatMap((member) =>
-        member.group.GroupMember.map((groupMember) => groupMember.user)
-      )
-    );
-  
-    return simplifiedUsers;
+
+    console.log('users ', users);
+
+    // Process and flatten spouse details as separate user objects
+    const flatUsers = users.flatMap((user) => {
+      // const mainUser = {
+      //   id: user.id,
+      //   firstName: user.firstName,
+      //   lastName: user.lastName,
+      //   email: user.email,
+      //   mobile: user.mobile,
+      //   companyName: user.companyName,
+      //   designation: user.designation,
+      //   country: user.country,
+      //   state: user.state,
+      //   coaNumber: user.coaNumber,
+      //   city: user.city,
+      //   pinCode: user.pinCode,
+      //   collegeName: user.collegeName,
+      //   center: user.center,
+      //   gstNumber: user.gstNumber,
+      //   gstBillingAddress: user.gstBillingAddress,
+      //   isBringingSpouse: user.isBringingSpouse,
+      //   bookingType: user.bookingType,
+      //   fileName: user.fileName,
+      //   groupSize: user.groupSize,
+      //   attended: user.attended,
+      //   isStudentAffiliatedToIia: user.isStudentAffiliatedToIia,
+      //   createdAt: user.createdAt,
+      //   iia: user.iia,
+      //   memberType: user.memberType,
+      // };
+
+      const spouseUsers = user.spouse.map((spouse) => ({
+        id: null, // Spouse doesn't have a user ID
+        firstName: spouse.firstName,
+        lastName: spouse.lastName,
+        email: spouse.email,
+        mobile: spouse.mobile,
+        companyName: null,
+        designation: null,
+        country: null,
+        state: null,
+        coaNumber: null,
+        city: null,
+        pinCode: null,
+        collegeName: null,
+        center: null,
+        gstNumber: null,
+        gstBillingAddress: null,
+        isBringingSpouse: null,
+        bookingType: 'Spouse',
+        fileName: null,
+        groupSize: null,
+        attended: null,
+        isStudentAffiliatedToIia: null,
+        createdAt: user.createdAt,
+        iia: null,
+        memberType: 'SPOUSE',
+      }));
+
+      const groupUsers = user.groupMmebers.flatMap((gm) =>
+        gm.group.GroupMember.map((member) => ({
+          id: member.user.id,
+          firstName: member.user.firstName,
+          lastName: member.user.lastName,
+          email: member.user.email,
+          mobile: member.user.mobile,
+          companyName: member.user.companyName,
+          designation: member.user.designation,
+          country: member.user.country,
+          state: member.user.state,
+          coaNumber: member.user.coaNumber,
+          city: member.user.city,
+          pinCode: member.user.pinCode,
+          collegeName: member.user.collegeName,
+          center: member.user.center,
+          gstNumber: member.user.gstNumber,
+          gstBillingAddress: member.user.gstBillingAddress,
+          isBringingSpouse: member.user.isBringingSpouse,
+          bookingType: member.user.bookingType,
+          fileName: member.user.fileName,
+          groupSize: member.user.groupSize,
+          attended: member.user.attended,
+          isStudentAffiliatedToIia: member.user.isStudentAffiliatedToIia,
+          createdAt: member.user.createdAt,
+          iia: member.user.iia,
+          memberType: member.user.memberType,
+        })),
+      );
+      return [...spouseUsers, ...groupUsers];
+    });
+
+    return flatUsers;
   }
-  
+
+  // async fetchUsersForCheckin(search: string) {
+  //   console.log('search', search);
+
+  //   const users = await this.prisma.user.findMany({
+  //     where: {
+  //       OR: [
+  //         { mobile: { equals: search } },
+  //         {
+  //           payments: {
+  //             some: {
+  //               transactionId: { equals: search },
+  //               type: { in: ['REGISTRATION', 'BOTH'] },
+  //             },
+  //           },
+  //         },
+  //       ],
+  //     },
+  //     select: {
+  //       id: true,
+  //       firstName: true,
+  //       lastName: true,
+  //       email: true,
+  //       mobile: true,
+  //       companyName: true,
+  //       designation: true,
+  //       country: true,
+  //       state: true,
+  //       coaNumber: true,
+  //       city: true,
+  //       pinCode: true,
+  //       collegeName: true,
+  //       center: true,
+  //       gstNumber: true,
+  //       gstBillingAddress: true,
+  //       isBringingSpouse: true,
+  //       bookingType: true,
+  //       fileName: true,
+  //       groupSize: true,
+  //       attended: true,
+  //       isStudentAffiliatedToIia: true,
+  //       createdAt: true,
+  //       iia: true,
+  //       memberType: true,
+  //       spouse: {
+  //         select: {
+  //           firstName: true,
+  //           lastName: true,
+  //           email: true,
+  //           mobile: true,
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   console.log('users ', users);
+  //   const simplifiedResponse = users.map((user) => ({
+  //     id: user.id,
+  //     firstName: user.firstName,
+  //     lastName: user.lastName,
+  //     email: user.email,
+  //     mobile: user.mobile,
+  //     companyName: user.companyName,
+  //     designation: user.designation,
+  //     country: user.country,
+  //     state: user.state,
+  //     coaNumber: user.coaNumber,
+  //     city: user.city,
+  //     pinCode: user.pinCode,
+  //     collegeName: user.collegeName,
+  //     center: user.center,
+  //     gstNumber: user.gstNumber,
+  //     gstBillingAddress: user.gstBillingAddress,
+  //     isBringingSpouse: user.isBringingSpouse,
+  //     bookingType: user.bookingType,
+  //     fileName: user.fileName,
+  //     groupSize: user.groupSize,
+  //     attended: user.attended,
+  //     isStudentAffiliatedToIia: user.isStudentAffiliatedToIia,
+  //     createdAt: user.createdAt,
+  //     iia: user.iia,
+  //     memberType: user.memberType,
+  //     spouse: user.spouse.map((s) => ({
+  //       name: `${s.firstName} ${s.lastName}`,
+  //       phone: s.mobile,
+  //       email: s.email,
+  //     })),
+  //   }));
+  //   return simplifiedResponse;
+  // }
+
+  async fetchParticipants(start: number, limit: number, search?: string) {
+    try {
+      const searchFilter = search
+        ? {
+            OR: [
+              { firstName: { contains: search } },
+              { lastName: { contains: search } },
+              { email: { contains: search } },
+              { mobile: { contains: search } },
+              { iia: { contains: search } },
+              { coaNumber: { contains: search } },
+              { state: { contains: search } },
+              { center: { contains: search } },
+              // Assuming memberType is an enum, use a different approach
+              {
+                payments: {
+                  some: {
+                    transactionId: { contains: search },
+                  },
+                },
+              },
+              {
+                payments: {
+                  some: {
+                    paymentStatus: { contains: search },
+                  },
+                },
+              },
+            ],
+          }
+        : undefined;
+
+      const participants = await this.prisma.user.findMany({
+        skip: Number(start),
+        take: Number(limit),
+        orderBy: {
+          createdAt: 'desc',
+        },
+        where: { ...searchFilter, attended: true },
+        include: {
+          payments: true,
+          accomodations: true,
+          spouse: true,
+          groupMmebers: {
+            include: {
+              group: {
+                include: {
+                  Payment: true,
+                  Accomodation: {
+                    select: {
+                      accommodationConfirmed: true,
+                      groupId: true,
+                    },
+                  },
+                  GroupMember: {
+                    include: {
+                      user: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // const totalCount = await this.prisma.user.count();
+
+      return {
+        participants,
+      };
+    } catch (error) {
+      console.log('error fetching bookings ', error);
+      throw new Error('Error fetching bookings  ' + error.message);
+    }
+  }
 }

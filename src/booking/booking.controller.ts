@@ -166,8 +166,7 @@ export class BookingController {
     @Res() res: Response,
   ) {
     try {
-      const users =
-        await this.bookingService.fetchUsersForCheckin(searchTerm);
+      const users = await this.bookingService.fetchUsersForCheckin(searchTerm);
       return res.status(HttpStatus.OK).json({
         statusCode: 200,
         message: 'User details fetched successfully',
@@ -184,6 +183,31 @@ export class BookingController {
       }
       // Handle unexpected errors
       throw new InternalServerErrorException('An unexpected error occurred');
+    }
+  }
+
+  @Get('participants')
+  //need authentication decorator
+  async fetchParticipants(
+    @Query('start') start: number = 0,
+    @Query('limit') limit: number = 10,
+    @Query('search') search: string,
+  ) {
+    try {
+      const { participants } = await this.bookingService.fetchParticipants(
+        start,
+        limit,
+        search,
+      );
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Bookings retrieved successfully',
+        participants,
+      };
+    } catch (error) {
+      console.log('Error from controller fetching bookings ', error);
+      throw new Error('Error fetching bookings ' + error.message);
     }
   }
 }
