@@ -28,26 +28,40 @@ export class AdminService {
     }
   }
   async updateAttendance(userId: any) {
-    console.log('userid => ', userId);
     const user = await this.prisma.user.findFirst({
-      where:{
-        id:userId
-      }
+      where: {
+        id: userId,
+      },
     });
 
     if (!user) {
       throw new NotFoundException(`User with userId ${userId} not found`);
-    }  
-    console.log("user",user)
+    }
+    console.log('user', user);
 
-   
+    if (user.isBringingSpouse) {
+      const spouse = await this.prisma.spouse.findFirst({
+        where: {
+          userId: user.id,
+        },
+      });
+      const spouseAttendedStatus = !spouse.attended;
+      await this.prisma.spouse.update({
+        where: {
+          id: spouse.id,
+        },
+        data: {
+          attended: spouseAttendedStatus,
+        },
+      });
+    }
     const newAttendanceStatus = !user.attended;
 
-    console.log("newAttendanceStatus",newAttendanceStatus)
+    console.log('newAttendanceStatus', newAttendanceStatus);
 
     return await this.prisma.user.update({
       where: { id: userId },
-      data: { attended: newAttendanceStatus },  
+      data: { attended: newAttendanceStatus },
     });
   }
 

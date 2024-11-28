@@ -389,7 +389,7 @@ export class BookingService {
             payments: {
               some: {
                 transactionId: { equals: search },
-                type: { in: ['REGISTRATION', 'BOTH'] },
+                // type: { in: ['REGISTRATION', 'BOTH'] },
               },
             },
           },
@@ -446,6 +446,9 @@ export class BookingService {
     });
 
     console.log('users ', users);
+    if (users[0].bookingType == 'Spouse') {
+      return users;
+    }
 
     // Process and flatten spouse details as separate user objects
     const flatUsers = users.flatMap((user) => {
