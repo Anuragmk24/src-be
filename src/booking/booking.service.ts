@@ -539,20 +539,17 @@ export class BookingService {
       );
       return [...spouseUsers, ...groupUsers];
     });
-    // Check for flat users with the same name and return distinct
-    const distinctUsers = flatUsers.filter(
-      (user, index, self) =>
-        index ===
-        self.findIndex(
-          (u) =>
-            u.firstName === user.firstName &&
-            u.lastName === user.lastName &&
-            u.email === user.email && 
-            u.mobile === user.mobile, // Use more fields if needed for distinction
-        ),
-    );
+    console.log('flatfuser ', flatUsers);
+ 
+  // Deduplicate based on the mobile number
+  const distinctUsers = flatUsers.filter((user, index, self) =>
+    index === self.findIndex((u) =>
+      u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase()
+    )
+  );
 
-    return distinctUsers;
+  return distinctUsers;
+    
   }
 
   // async fetchUsersForCheckin(search: string) {
