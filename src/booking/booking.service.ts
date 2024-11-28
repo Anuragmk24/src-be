@@ -478,7 +478,7 @@ export class BookingService {
       // };
 
       const spouseUsers = user.spouse.map((spouse) => ({
-        id: 1001, // Spouse doesn't have a user ID
+        id: spouse.id, // Spouse doesn't have a user ID
         firstName: spouse.firstName,
         lastName: spouse.lastName,
         email: spouse.email,

@@ -40,6 +40,7 @@ export class AdminService {
     }  
     console.log("user",user)
 
+   
     const newAttendanceStatus = !user.attended;
 
     console.log("newAttendanceStatus",newAttendanceStatus)

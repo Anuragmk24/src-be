@@ -91,6 +91,7 @@ model Spouse {
   email     String
   mobile    String
   createdAt DateTime @default(now())
+  attended  Boolean  @default(false)
 }
 
 model Group {
