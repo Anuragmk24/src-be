@@ -537,7 +537,7 @@ export class BookingService {
           memberType: member.user.memberType,
         })),
       );
-      return [...spouseUsers, ...groupUsers];
+      return [...groupUsers,...spouseUsers];
     });
     console.log('flatfuser ', flatUsers);
  
