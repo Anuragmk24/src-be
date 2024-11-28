@@ -539,8 +539,19 @@ export class BookingService {
       );
       return [...spouseUsers, ...groupUsers];
     });
+    // Check for flat users with the same name and return distinct
+    const distinctUsers = flatUsers.filter(
+      (user, index, self) =>
+        index ===
+        self.findIndex(
+          (u) =>
+            u.firstName === user.firstName &&
+            u.lastName === user.lastName &&
+            u.email === user.email, // Use more fields if needed for distinction
+        ),
+    );
 
-    return flatUsers;
+    return distinctUsers;
   }
 
   // async fetchUsersForCheckin(search: string) {
