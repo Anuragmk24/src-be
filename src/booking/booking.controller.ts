@@ -194,7 +194,7 @@ export class BookingController {
     @Query('search') search: string,
   ) {
     try {
-      const { participants } = await this.bookingService.fetchParticipants(
+      const { participants ,totalParticipants} = await this.bookingService.fetchParticipants(
         start,
         limit,
         search,
@@ -204,6 +204,7 @@ export class BookingController {
         statusCode: HttpStatus.OK,
         message: 'Bookings retrieved successfully',
         participants,
+        totalParticipants
       };
     } catch (error) {
       console.log('Error from controller fetching bookings ', error);

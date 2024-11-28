@@ -453,34 +453,6 @@ export class BookingService {
 
     // Process and flatten spouse details as separate user objects
     const flatUsers = users.flatMap((user) => {
-      // const mainUser = {
-      //   id: user.id,
-      //   firstName: user.firstName,
-      //   lastName: user.lastName,
-      //   email: user.email,
-      //   mobile: user.mobile,
-      //   companyName: user.companyName,
-      //   designation: user.designation,
-      //   country: user.country,
-      //   state: user.state,
-      //   coaNumber: user.coaNumber,
-      //   city: user.city,
-      //   pinCode: user.pinCode,
-      //   collegeName: user.collegeName,
-      //   center: user.center,
-      //   gstNumber: user.gstNumber,
-      //   gstBillingAddress: user.gstBillingAddress,
-      //   isBringingSpouse: user.isBringingSpouse,
-      //   bookingType: user.bookingType,
-      //   fileName: user.fileName,
-      //   groupSize: user.groupSize,
-      //   attended: user.attended,
-      //   isStudentAffiliatedToIia: user.isStudentAffiliatedToIia,
-      //   createdAt: user.createdAt,
-      //   iia: user.iia,
-      //   memberType: user.memberType,
-      // };
-
       const spouseUsers = user.spouse.map((spouse) => ({
         id: spouse.id, // Spouse doesn't have a user ID
         firstName: spouse.firstName,
@@ -543,31 +515,16 @@ export class BookingService {
     console.log('flatfuser ', flatUsers);
 
     // Deduplicate based on the mobile number
-    const distinctUsers = flatUsers.filter((user, index, self) =>
-      index === self.findIndex((u) =>
-        u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase()
-      )
+    const distinctUsers = flatUsers.filter(
+      (user, index, self) =>
+        index ===
+        self.findIndex(
+          (u) =>
+            u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase(),
+        ),
     );
 
-    // Deduplicate based on the mobile number, but allow multiple users with the same mobile if `isBringingSpouse` is true
-    // const distinctUsers = flatUsers.filter((user, index, self) => {
-    //   // If the user is bringing a spouse, allow multiple entries with the same mobile number
-    //   if (user.isBringingSpouse) {
-    //     return true; // Allow duplicates if `isBringingSpouse` is true
-    //   }
-
-    //   // Otherwise, check for duplicates based on the mobile number
-    //   return (
-    //     index ===
-    //     self.findIndex(
-    //       (u) =>
-    //         u.mobile.trim().toLowerCase() === user.mobile.trim().toLowerCase(),
-    //     )
-    //   );
-    // });
-
     return distinctUsers;
-
   }
 
   // async fetchUsersForCheckin(search: string) {
@@ -726,10 +683,16 @@ export class BookingService {
         },
       });
 
-      // const totalCount = await this.prisma.user.count();
+      const totalCount = await this.prisma.user.findMany({
+        where: {
+          attended: true,
+        },
+      });
 
+      let totalParticipants = totalCount?.length;
       return {
-        participants,
+       participants,
+        totalParticipants,
       };
     } catch (error) {
       console.log('error fetching bookings ', error);
